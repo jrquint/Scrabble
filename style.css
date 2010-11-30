@@ -1,0 +1,20 @@
+
+#scrabble {
+	margin:10px;
+}
+input#in {
+}
+#board {
+	position:relative;
+	border:2px solid #000;
+}
+.field {
+	position:absolute;
+	width:30px;
+	height:30px;
+	
+	background:#eee;
+}
+.field.at {
+	background:#ccc;
+}
