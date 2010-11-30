@@ -1,7 +1,22 @@
 
 window.addEvent('domready', function()
 {
-	window.scrabble = new ScrabbleGame('scrabble');
+	window.scrabble = new ScrabbleGame('scrabble', {
+		'8,3': 'k',
+		'8,4': 'e',
+		'8,5': 'l',
+		'8,6': 'l',
+		'8,7': 'e',
+		'8,8': 'y',
+		
+		'5,5': 'h',
+		'6,5': 'a',
+		'7,5': 'p',
+	//	'8,5': 'l',
+		'9,5': 'a',
+		'10,5': 'n',
+		'11,5': 'd',
+	});
 });
 
 /**
@@ -22,14 +37,92 @@ var ScrabbleGame = new Class(
 	initialize: function(el)
 	{
 		this.el = $(el);
-		this._setupBoard();
+		var layout = arguments[1] || {};
+		
+		this._setupTiles();
+		this._setupBoard(layout);
 		this._setupActivities();
+	},
+	
+	/**
+	 * Sets up tileset etc..
+	 */
+	_setupTiles: function()
+	{
+		/* We shouldn't need this!
+		this.tile_set = {
+			'_': 2,
+			'a': 9,
+			'b': 2,
+			'c': 2,
+			'd': 4,
+			'e': 12,
+			'f': 2,
+			'g': 3,
+			'h': 2,
+			'i': 9,
+			'j': 1,
+			'k': 1,
+			'l': 4,
+			'm': 2,
+			'n': 6,
+			'o': 8,
+			'p': 2,
+			'q': 1,
+			'r': 6,
+			's': 4,
+			't': 6,
+			'u': 4,
+			'v': 2,
+			'w': 2,
+			'x': 1,
+			'y': 2,
+			'z': 1,
+		};*/
+		
+		this.letter_scores = {
+			'_': 0,
+			'a': 1,
+			'b': 3,
+			'c': 3,
+			'd': 2,
+			'e': 1,
+			'f': 4,
+			'g': 2,
+			'h': 4,
+			'i': 1,
+			'j': 8,
+			'k': 5,
+			'l': 1,
+			'm': 3,
+			'n': 1,
+			'o': 1,
+			'p': 3,
+			'q': 10,
+			'r': 1,
+			's': 1,
+			't': 1,
+			'u': 1,
+			'v': 4,
+			'w': 4,
+			'x': 8,
+			'y': 4,
+			'z': 10,
+		};
+	},
+	
+	/**
+	 * Gets the score for the given letter
+	 */
+	get_letter_score: function(letter)
+	{
+		return this.letter_scores[letter];
 	},
 	
 	/**
 	 * Fills board div with field etc..
 	 */
-	_setupBoard: function()
+	_setupBoard: function(layout)
 	{
 		// Board
 		this.board = new Element('div', {
@@ -42,7 +135,7 @@ var ScrabbleGame = new Class(
 		this.board.inject(this.el, 'bottom');
 		
 		// Fields
-		var x, y, field;
+		var x, y, field, letter;
 		this.fields = [];
 		for (x = 0; x < 15; x++)
 		{
@@ -62,7 +155,17 @@ var ScrabbleGame = new Class(
 					y: y,
 				});
 				field.inject(this.board, 'bottom');
-				this.fields[x][y] = field;
+				this.fields[x][y] = {
+					field: field,
+				};
+				if (layout[x.toString() + ',' + y.toString()] != undefined)
+				{
+					letter = layout[x.toString() + ',' + y.toString()];
+					this.fields[x][y].permanent = letter;
+					this.fields[x][y].field.addClass('permanent').set('html',
+						'<p>'+letter+'<span>'+this.get_letter_score(letter)+'</span></p>'
+					);
+				}
 			}
 		}
 	},
@@ -72,7 +175,7 @@ var ScrabbleGame = new Class(
 	 */
 	fieldAt: function(pos)
 	{
-		return this.fields[pos.x][pos.y];
+		return this.fields[pos.x][pos.y].field;
 	},
 	
 	/**
@@ -193,11 +296,19 @@ var ScrabbleGame = new Class(
 	},
 	
 	/**
+	 * Checks whether the field at given pos contains permanent tile
+	 */
+	is_permanent: function(pos)
+	{
+		return this.fieldAt(pos).hasClass('permanent');
+	},
+	
+	/**
 	 * Checks whether the field at given pos is written to
 	 */
 	is_written_to: function(pos)
 	{
-		return this.fieldAt(pos).hasClass('written');
+		return this.fieldAt(pos).hasClass('temporary');
 	},
 	
 	/**
@@ -206,7 +317,7 @@ var ScrabbleGame = new Class(
 	remove_letter: function()
 	{
 		var pos = arguments[0] || this.pos;
-		this.fieldAt(pos).set('text', '').removeClass('written');
+		this.fieldAt(pos).set('html', '').removeClass('temporary');
 		return true;
 	},
 	
@@ -226,6 +337,11 @@ var ScrabbleGame = new Class(
 	 */
 	write_letter: function(letter)
 	{
+		if (this.is_permanent(this.pos))
+		{
+			return false;
+		}
+		
 		// Activity checks
 		if (this.activity < this.activities.Navigate)
 		{
@@ -234,6 +350,7 @@ var ScrabbleGame = new Class(
 		this.activity = Math.max(this.activity, this.activities.Write);
 		
 		// Write letter
-		this.written.push(this.fieldAt(this.pos).addClass('written').set('text', letter).retrieve('pos'));
+		var html = '<p>'+letter+'<span>'+this.get_letter_score(letter)+'</span></p>';
+		this.written.push(this.fieldAt(this.pos).addClass('temporary').set('html', html).retrieve('pos'));
 	},
 });
