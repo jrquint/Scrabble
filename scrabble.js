@@ -142,8 +142,15 @@ var ScrabbleGame = new Class(
 		}
 		else if (this.activity == this.activities.Write)
 		{
-			this.remove_letters();
-			this.activity = this.activities.Navigate;
+			if (this.is_written_to(this.pos))
+			{
+				this.remove_letter(this.pos);
+			}
+			else
+			{
+				this.remove_letters();
+				this.activity = this.activities.Navigate;
+			}
 		}
 	},
 	
@@ -186,14 +193,29 @@ var ScrabbleGame = new Class(
 	},
 	
 	/**
+	 * Checks whether the field at given pos is written to
+	 */
+	is_written_to: function(pos)
+	{
+		return this.fieldAt(pos).hasClass('written');
+	},
+	
+	/**
+	 * Removes a single letter at current position or given position
+	 */
+	remove_letter: function()
+	{
+		var pos = arguments[0] || this.pos;
+		this.fieldAt(pos).set('text', '').removeClass('written');
+		return true;
+	},
+	
+	/**
 	 * Remove all temporary letters from the board
 	 */
 	remove_letters: function()
 	{
-		Array.each(this.written, function(field)
-		{
-			field.set('text', '').removeClass('written');
-		});
+		Array.each(this.written, this.remove_letter.bind(this));
 		this.written = [];
 		return true;
 	},
@@ -212,6 +234,6 @@ var ScrabbleGame = new Class(
 		this.activity = Math.max(this.activity, this.activities.Write);
 		
 		// Write letter
-		this.written.push(this.fieldAt(this.pos).addClass('written').set('text', letter));
+		this.written.push(this.fieldAt(this.pos).addClass('written').set('text', letter).retrieve('pos'));
 	},
 });
