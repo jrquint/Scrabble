@@ -12,9 +12,22 @@ input#in {
 	position:absolute;
 	width:30px;
 	height:30px;
+	line-height:30px;
+	text-align:center;
+	
+	font-family:Helvetica, Arial, sans-serif;
+	text-transform:uppercase;
+	font-weight:bold;
+	font-size:20px;
 	
 	background:#eee;
 }
 .field.at {
-	background:#ccc;
+	background:#D3D3D3;
+}
+.field.written {
+	background:#A9D5F2;
+}
+.field.written.at {
+	background:#45B0F7;
 }
