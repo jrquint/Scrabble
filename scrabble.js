@@ -156,9 +156,7 @@ var ScrabbleGame = new Class(
 	{
 		if (this.activity < this.activities.Navigate)
 		{
-			this.put_focus(this.pos);
 			this.activity = this.activities.Navigate;
-			return;
 		}
 		
 		var relative = arguments[1] || false;
