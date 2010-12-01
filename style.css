@@ -8,6 +8,11 @@ input#in {
 	position:relative;
 	border:2px solid #000;
 }
+.field,
+.field p,
+.field p span {
+	cursor:pointer;
+}
 .field {
 	position:absolute;
 	width:30px;
