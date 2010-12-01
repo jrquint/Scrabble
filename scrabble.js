@@ -17,7 +17,14 @@ window.addEvent('domready', function()
 		'10,5': 'n',
 		'11,5': 'd',
 	});
+	
+	window.scrabble.addEvent('onWrite', my_points);
 });
+
+function my_points(data)
+{
+	$('points').set('text', 'valid? ' + (data.is_valid ? 'YES' : 'NO') + ', score? ' + data.score.toString());
+}
 
 /**
  * Creates a new scrabble game object
@@ -39,9 +46,60 @@ var ScrabbleGame = new Class(
 		this.el = $(el);
 		var layout = arguments[1] || {};
 		
+		this._setupCustomEvents();
 		this._setupTiles();
 		this._setupBoard(layout);
 		this._setupActivities();
+	},
+	
+	/**
+	 * Set up custom events..
+	 */
+	_setupCustomEvents: function()
+	{
+		// An object with event names as keys and
+		// arrays of subscribed callbacks as values
+		
+		// I reckon there are two kinds of data associated with events:
+		// 1. Custom data given to the fired event where the event was fired
+		// 2. Data that just 'belongs' to this kind of event, of which the generation
+		//    method is statically available (within object-state..)
+		this.events = {
+			onWrite: {
+				subscribers: [],
+				data_generators: {
+					is_valid: this.is_valid,
+					score: this.calc_score,
+				},
+			},
+		};
+	},
+	
+	/**
+	 * Fires one of custom events
+	 */
+	fireEvent: function(eventname)
+	{
+		var custom_data = arguments[1] || {};
+		var generated_data = {};
+		Object.each(this.events[eventname].data_generators, function(generator, key)
+		{
+			generated_data[key] = generator.call(this);
+		});
+		Array.each(this.events[eventname].subscribers, function(subscriber)
+		{
+			subscriber.call(this, Object.merge(generated_data, custom_data));
+		}, this);
+	},
+	
+	addEvent: function(eventname, subscriber)
+	{
+		if (this.events[eventname] == undefined)
+		{
+			alert(eventname);
+			return false;
+		}
+		this.events[eventname].subscribers.push(subscriber);
 	},
 	
 	/**
@@ -214,6 +272,10 @@ var ScrabbleGame = new Class(
 		$$('.field').addEvent('click', (function(e) {
 			this.move($(e.target).retrieve('pos'));
 		}).bind(this));
+		// TODO Bug: when a <p> is added later, it is not included in this event!!
+		$$('.field p').addEvent('click', (function(e) {
+			this.move($(e.target).getParent('.field').retrieve('pos'));
+		}).bind(this));
 		
 		// Key events: navigation shortcuts & letter input
 		var opts = {
@@ -318,6 +380,12 @@ var ScrabbleGame = new Class(
 	{
 		var pos = arguments[0] || this.pos;
 		this.fieldAt(pos).set('html', '').removeClass('temporary');
+		
+		// TODO Bug: this is okay, but not when it is iterated by this.remove_letters
+		// I think this, and other minor problems, hint at a separation such as:
+		//  * event-firing scrabble game class
+		//  * board-managing read/write/remove class that does not fire events
+		this.fireEvent('onWrite');
 		return true;
 	},
 	
@@ -328,6 +396,8 @@ var ScrabbleGame = new Class(
 	{
 		Array.each(this.written, this.remove_letter.bind(this));
 		this.written = [];
+		
+		this.fireEvent('onWrite');
 		return true;
 	},
 	
@@ -352,5 +422,18 @@ var ScrabbleGame = new Class(
 		// Write letter
 		var html = '<p>'+letter+'<span>'+this.get_letter_score(letter)+'</span></p>';
 		this.written.push(this.fieldAt(this.pos).addClass('temporary').set('html', html).retrieve('pos'));
+		
+		// Fire event
+		this.fireEvent('onWrite');
+	},
+	
+	is_valid: function()
+	{
+		return false;
+	},
+	
+	calc_score: function()
+	{
+		return 42;
 	},
 });

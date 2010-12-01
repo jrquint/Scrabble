@@ -8,6 +8,8 @@
 </head>
 <body>
 
+<p id="points"></p>
+
 <div id="scrabble">
 </div>
 
