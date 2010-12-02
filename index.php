@@ -9,7 +9,7 @@
 </head>
 <body>
 
-<p id="points"></p>
+<p id="points">..</p>
 
 <div id="scrabble">
 </div>

@@ -17,6 +17,12 @@ var BoardManager = new Class(
 		this.board = $(board_div);
 		this._setupTiles();
 		this._setupBoard();
+		
+		this.invalidities = {
+			NoTiles:         0,
+			TwoDimensions:   1,
+			NotAllConnected: 2,
+		};
 	},
 	
 	/**
@@ -147,6 +153,7 @@ var BoardManager = new Class(
 				}
 			}
 		}
+		
 		return positions;
 	},
 	
@@ -161,7 +168,7 @@ var BoardManager = new Class(
 			min_x: 14,
 			min_y: 14,
 		};
-		return Array.every(this.temporaryTiles, function(pos)
+		return Array.every(this.getTemporaryTilePositions(), function(pos)
 		{
 			bounds.max_x = Math.max(pos.x, bounds.max_x);
 			bounds.max_y = Math.max(pos.y, bounds.max_y);
@@ -170,6 +177,56 @@ var BoardManager = new Class(
 			
 			return (bounds.max_x == bounds.min_x || bounds.max_y == bounds.min_y);
 		});
+	},
+	
+	/**
+	 * Checks whether all temporary tiles are connected
+	 * to each other (may be via permanent tiles)
+	 * and to the mainland
+	 * Is it assumed that all tiles are in ONE column or row
+	 */
+	allConnected: function()
+	{
+		return Array.every(this.getTemporaryTilePositions(), function(pos)
+		{
+			return (this.hasTile({x:pos.x,   y:pos.y+1}) ||
+					this.hasTile({x:pos.x,   y:pos.y-1}) ||
+					this.hasTile({x:pos.x+1, y:pos.y}) ||
+					this.hasTile({x:pos.x-1, y:pos.y}));
+		}, this);
+	},
+	
+	/**
+	 * Checks validity of temporary tiles
+	 */
+	isValid: function()
+	{
+		if (this.getTemporaryTilePositions().length == 0)
+		{
+			this.invalidity = this.invalidities.NoTiles;
+			return false;
+		}
+		else
+		{
+			if (!this.usingOneDimension())
+			{
+				this.invalidity = this.invalidities.TwoDimensions;
+				return false;
+			}
+			else
+			{
+				if (!this.allConnected())
+				{
+					this.invalidity = this.invalidities.NotAllConnected;
+					return false;
+				}
+				else
+				{
+					return true;
+				}
+			}
+		}
+		return false;
 	},
 	
 	/**
@@ -247,6 +304,15 @@ var BoardManager = new Class(
 	getTileScore: function(letter)
 	{
 		return this.tileScores[letter];
+	},
+	
+	/**
+	 * Checks whether a field has a tile
+	 */
+	hasTile: function()
+	{
+		var pos = arguments[0] || this.pos;
+		return (this.hasPermanentTile(pos) || this.hasTemporaryTile(pos));
 	},
 	
 	/**

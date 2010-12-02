@@ -16,12 +16,17 @@ window.addEvent('domready', function()
 		{pos: {x: '11', y: '5'}, letter: 'd'},
 	]);
 	
-	//window.scrabble.addEvent('onWrite', my_points);
+	window.scrabble.addEvent('onWrite', my_points);
 });
 
 function my_points(data)
 {
-	$('points').set('text', 'valid? ' + (data.is_valid ? 'YES' : 'NO') + ', score? ' + data.score.toString());
+	var errors = ['No tiles!', 'Only one dimension please!', 'Not all tiles connected!'];
+	$('points').set('text', 'valid? ' + ((data.score > 0) ? 'YES' : 'NO') + ', score? ' + data.score.toString());
+	if (data.score < 0)
+	{
+		$('points').appendText(' Reason? ' + errors[data.reason]);
+	}
 }
 
 /**
@@ -50,8 +55,6 @@ var ScrabbleGame = new Class(
 		var board = (new Element('div', {id: 'board'})).inject(el, 'bottom');
 		this.boardManager = new BoardManager(board);
 		this.boardManager.putTiles((arguments[1] || {}), 'permanent');
-		
-		//this._setupCustomEvents();
 		
 		this.relative_movements = {
 			'up':    {x: 0, y:-1},
@@ -93,6 +96,9 @@ var ScrabbleGame = new Class(
 			opts.events[letter] = (function(e) { this.letter(letter); e.stop(); }).bind(this);
 		}, this);
 		this.keyboard_events = new Keyboard(opts);
+		
+		// Setup custom events
+		this._setupCustomEvents();
 	},
 	
 	/**
@@ -117,11 +123,13 @@ var ScrabbleGame = new Class(
 				{
 					this.activity = this.activities.Navigate;
 				}
+				this.fireEvent('onWrite');
 			}
 			else
 			{
 				this.boardManager.removeAllTiles();
 				this.activity = this.activities.Navigate;
+				this.fireEvent('onWrite');
 			}
 		}
 	},
@@ -149,6 +157,7 @@ var ScrabbleGame = new Class(
 		{
 			this.boardManager.putTile(letter);
 			this.activity = Math.max(this.activity, this.activities.Write);
+			this.fireEvent('onWrite');
 		}
 	},
 	
@@ -183,9 +192,32 @@ var ScrabbleGame = new Class(
 	},
 	
 	/**
+	 * Calculates score for entered word
+	 */
+	calcScore: function()
+	{
+		if (!this.boardManager.isValid())
+		{
+			return -1;
+		}
+		return 42;
+	},
+	
+	_event_onWrite: function()
+	{
+		var data = {
+			score: this.calcScore(),
+		};
+		if (data.score < 0)
+		{
+			data.reason = this.boardManager.invalidity;
+		}
+		return data;
+	},
+	
+	/**
 	 * Set up custom events..
 	 */
-	/*
 	_setupCustomEvents: function()
 	{
 		// An object with event names as keys and
@@ -196,27 +228,25 @@ var ScrabbleGame = new Class(
 		// 2. Data that just 'belongs' to this kind of event, of which the generation
 		//    method is statically available (within object-state..)
 		this.events = {
-			onWrite: {
-				subscribers: [],
-				data_generators: {
-					is_valid: this.is_valid,
-					score: this.calc_score,
-				},
-			},
+			onWrite: [],
 		};
 	},
 	
 	fireEvent: function(eventname)
 	{
-		var custom_data = arguments[1] || {};
-		var generated_data = {};
-		Object.each(this.events[eventname].data_generators, function(generator, key)
+		if (this.events[eventname] == undefined)
 		{
-			generated_data[key] = generator.call(this);
-		});
-		Array.each(this.events[eventname].subscribers, function(subscriber)
+			return false;
+		}
+		
+		var data = {};
+		if (this['_event_' + eventname] != undefined)
 		{
-			subscriber.call(this, Object.merge(generated_data, custom_data));
+			data = this['_event_' + eventname].call(this);
+		}
+		Array.each(this.events[eventname], function(subscriber)
+		{
+			subscriber.call(this, data);
 		}, this);
 	},
 	
@@ -227,7 +257,6 @@ var ScrabbleGame = new Class(
 			alert(eventname);
 			return false;
 		}
-		this.events[eventname].subscribers.push(subscriber);
+		this.events[eventname].push(subscriber);
 	},
-	*/
 });
