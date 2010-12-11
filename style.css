@@ -31,6 +31,12 @@ input#in {
 	font-weight:bold;
 	font-size:18px;
 }
+.field p.blankletter {
+	margin:0;
+	line-height:28px;
+	text-transform:lowercase;
+	border:1px dashed #000;
+}
 .field p span {
 	font-weight:normal;
 	font-size:10px;

@@ -122,17 +122,22 @@ var BoardManager = new Class(
 	},
 	
 	/**
-	 * Registeres temporary tile to board
+	 * Registers temporary tile to board
 	 */
-	registerTemporaryTile: function(pos)
+	registerTemporaryTile: function(pos, letter)
 	{
 		this.fields[pos.x][pos.y].temporary = true;
+		this.fields[pos.x][pos.y].letter = letter;
+		if (letter == '_')
+		{
+			this.fields[pos.x][pos.y].blankletter = arguments[2];
+		}
 	},
 	
 	/**
-	 * Unregisteres temporary tile from board
+	 * Unregisters temporary tile from board
 	 */
-	registerTemporaryTile: function(pos)
+	unregisterTemporaryTile: function(pos)
 	{
 		this.fields[pos.x][pos.y].temporary = false;
 	},
@@ -189,10 +194,14 @@ var BoardManager = new Class(
 	{
 		return Array.every(this.getTemporaryTilePositions(), function(pos)
 		{
-			return (this.hasTile({x:pos.x,   y:pos.y+1}) ||
-					this.hasTile({x:pos.x,   y:pos.y-1}) ||
-					this.hasTile({x:pos.x+1, y:pos.y}) ||
-					this.hasTile({x:pos.x-1, y:pos.y}));
+			// at least one side (north, south, east or west) must be connected
+			// but we have to be careful about checking out of game bounds!
+			var n, e, s, w;
+			n = (pos.y ==  0) ? false : this.hasTile({x:pos.x,   y:pos.y-1});
+			e = (pos.x == 14) ? false : this.hasTile({x:pos.x+1, y:pos.y  });
+			s = (pos.y == 14) ? false : this.hasTile({x:pos.x,   y:pos.y+1});
+			w = (pos.x ==  0) ? false : this.hasTile({x:pos.x-1, y:pos.y  });
+			return (n || e || s || w);
 		}, this);
 	},
 	
@@ -201,6 +210,7 @@ var BoardManager = new Class(
 	 */
 	isValid: function()
 	{
+		// TODO connected to mainland!
 		if (this.getTemporaryTilePositions().length == 0)
 		{
 			this.invalidity = this.invalidities.NoTiles;
@@ -298,6 +308,30 @@ var BoardManager = new Class(
 	},
 	
 	/**
+	 * Returns tile letter for tile at pos
+	 * 'Blank' tile denoted by '_'
+	 */
+	getTileLetter: function()
+	{
+		var pos = arguments[0] || this.pos;
+		return this.fields[pos.x][pos.y].letter;
+	},
+	
+	/**
+	 * Returns tile blankletter for tile at pos
+	 * If tile not a blank tile: return false
+	 */
+	getTileBlankLetter: function()
+	{
+		var pos = arguments[0] || this.pos;
+		if (this.getTileLetter(pos) != '_')
+		{
+			return false;
+		}
+		return this.fields[pos.x][pos.y].blankletter;
+	},
+	
+	/**
 	 * Returns individual tile score for tile with given letter.
 	 * 'Blank' tile denoted by '_'
 	 */
@@ -339,10 +373,25 @@ var BoardManager = new Class(
 	putTile: function(letter, pos, permanentType)
 	{
 		pos = arguments[1] || this.pos;
-		this.registerTemporaryTile(pos);
-		this.fieldAt(pos)
-			.addClass((permanentType ? 'permanent' : 'temporary'))
-			.set('html', '<p>' + letter + '<span>' + this.getTileScore(letter) + '</span></p>');
+		permanentType = (permanentType ? 'permanent' : 'temporary');
+		var blankletter;
+		if (letter.substr(0,1) == '_')
+		{
+			blankletter = letter.substr(1);
+			letter = '_';
+		}
+		
+		this.registerTemporaryTile(pos, letter, blankletter);
+		if (letter == '_' && permanentType == 'temporary')
+		{
+			this.fieldAt(pos).addClass(permanentType)
+				.set('html', '<p class="blankletter">'+blankletter+'</p>');
+		}
+		else
+		{
+			this.fieldAt(pos).addClass(permanentType)
+				.set('html', '<p>' + letter + '<span>' + this.getTileScore(letter) + '</span></p>');
+		}
 	},
 	
 	/**
@@ -365,7 +414,7 @@ var BoardManager = new Class(
 		var f = this.fieldAt(pos);
 		if (f.hasClass('temporary'))
 		{
-			this.registerTemporaryTile(pos);
+			this.unregisterTemporaryTile(pos);
 			f.removeClass('temporary').empty();
 		}
 	},

@@ -64,6 +64,8 @@ var ScrabbleGame = new Class(
 		Array.each('abcdefghijklmnopqrstuvwxyz'.split(''), function(letter)
 		{
 			opts.events[letter] = (function(e) { this.letter(letter); e.stop(); }).bind(this);
+			// Enter blank letter by pressing shift + [desired letter]
+			opts.events['shift+'+letter] = (function(e) { this.letter('_'+letter); e.stop(); }).bind(this);
 		}, this);
 		this.keyboard_events = new Keyboard(opts);
 		
@@ -109,7 +111,100 @@ var ScrabbleGame = new Class(
 	 */
 	submit: function()
 	{
-		// TODO
+		if (!this.boardManager.isValid())
+		{
+			alert('not valid!');
+			return false;
+		}
+		
+		var notation = this.getPlayNotation_();
+		alert(notation);
+	},
+	
+	/**
+	 * Gets play notation for submitted word.
+	 * Asserts that the word to be submitted is valid
+	 */
+	getPlayNotation_: function()
+	{
+		var notation = '';
+		var check_pos;
+		var tmp = this.boardManager.getTemporaryTilePositions();
+		
+		// Get word direction and bounds
+		// (resulting in an implicitly stated range (<x1,y1> -- <x2,y2>) using the
+		// variables 'constant_coord', 'variable_coord', 'minbound', 'maxbound')
+		// e.g. If word is horizontal, then 'constant_coord' = 'y' and variable_coord = 'x',
+		// and 'minbound' and 'maxbound' will be x-values of coordinates
+		
+		// Discovery of direction is distinct in two cases: ONE temporary letter or multiple
+		if (tmp.length == 1)
+		{
+			// word direction is an arbitrary choice
+			// later on, we might make this choice more sophiticated
+			var constant_coord = 'x';
+			var variable_coord = 'y';
+		}
+		else
+		{
+			var constant_coord = (tmp[0].y == tmp[1].y) ? 'y' : 'x';
+			var variable_coord = (constant_coord == 'x') ? 'y' : 'x';
+		}
+		
+		// Get bounds of word
+		var minbound = tmp[0][variable_coord];
+		var maxbound = tmp[0][variable_coord];
+		// find min bound
+		check_pos = Object.clone(tmp[0]);
+		while (this.boardManager.hasTile(check_pos))
+		{
+			minbound = check_pos[variable_coord];
+			check_pos[variable_coord]--;
+		}
+		// find max bound
+		check_pos = Object.clone(tmp[0]);
+		while (this.boardManager.hasTile(check_pos))
+		{
+			maxbound = check_pos[variable_coord];
+			check_pos[variable_coord]++;
+		}
+		
+		// Get letter within bounds
+		check_pos = Object.clone(tmp[0]);
+		for (var i = minbound; i <= maxbound; i++)
+		{
+			check_pos[variable_coord] = i;
+			var letter = this.boardManager.getTileLetter(check_pos);
+			if (this.boardManager.hasPermanentTile(check_pos))
+			{
+				notation += '('+letter.toUpperCase()+')';
+			}
+			else if (letter == '_')
+			{
+				notation += '['+this.boardManager.getTileBlankLetter(check_pos).toLowerCase()+']';
+			}
+			else
+			{
+				notation += letter.toUpperCase();
+			}
+		}
+		notation = notation.replace(/\)\(/g, '');
+		
+		// Append direction and first coordinate to notation
+		if (constant_coord == 'x')
+		{
+			notation = String.fromCharCode(65+tmp[0][constant_coord]) + minbound + ' ' + notation;
+		}
+		else
+		{
+			notation = tmp[0][constant_coord] + String.fromCharCode(65+minbound) + ' ' + notation;
+		}
+		
+		// Append score to notation
+		notation += ' ' + this.calcScore().toString();
+		
+		alert(notation);
+		return notation;
 	},
 	
 	/**
@@ -170,7 +265,7 @@ var ScrabbleGame = new Class(
 		{
 			return -1;
 		}
-		return 42;
+		return 42; // TODO
 	},
 	
 	_event_onWrite: function()
