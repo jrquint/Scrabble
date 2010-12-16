@@ -19,7 +19,7 @@ class Game extends AppModel
 				# All fields empty?
 				# In rack of active player?
 				# All connected?
-				# Connected to mainland?
+				# Connected to mainland? / First word?
 	*/
 	function playMove($notation)
 	{
@@ -27,6 +27,15 @@ class Game extends AppModel
 		if ($notation == 'pass')
 		{
 			echo 'PASS<br />';
+		}
+		elseif (1 == preg_match('/^exchange (?<letters>[a-zA-Z_]{1,7})$/', $notation, $matches))
+		{
+			$letters = strtoupper($matches['letters']);
+			if (!$this->haveLetters_($letters))
+			{
+				echo 'exchange error: have not letters!';
+			}
+			echo 'exchange rack("'. $this->getActivePlayerRack_() .'"): "'.$letters . '"';
 		}
 		// This is really a word play -- let's analyse it!
 		elseif (1 == preg_match('/^(?<word>[a-zA-Z\(\)\[\]]+)[ ]+(?<initpos>[0-9]{1,2}[a-oA-O]|[a-oA-O][0-9]{1,2})([ ]+(?<score>[0-9]+))?$/', $notation, $matches))
@@ -64,7 +73,39 @@ class Game extends AppModel
 		else
 		{
 			echo 'INVALID<br />';
+			return false;
 		}
+	}
+	
+	// Checks if active player in this game has the given letters
+	// Must be used within context of $this->id
+	function haveLetters_($letters)
+	{
+		$rack = str_split($this->getActivePlayerRack_());
+		if (is_string($letters))
+		{
+			$letters = str_split($letters);
+		}
+		foreach ($letters as $letter)
+		{
+			$key = array_search($letter, $rack);
+			if ($key === false)
+			{
+				return false;
+			}
+			unset($rack[$key]);
+		}
+		return true;
+	}
+	
+	// Gets the rack of the active player as an string of letters ("_" for blank)
+	// Must be used within context of $this->id
+	function getActivePlayerRack_()
+	{
+		$this->read(); // Get data of this game
+		$this->Player->id = $this->data['Game']['active_player'];
+		$this->Player->read(); // Get active player data
+		return strtoupper($this->Player->data['Player']['rack_tiles']);
 	}
 	
 	// Checks validity of given "placed tiles" within the context of current game and active player
@@ -76,7 +117,7 @@ class Game extends AppModel
 			# In rack of active player?
 			# All in one dimension?
 			# All connected?
-			# Connected to mainland?
+			# Connected to mainland? / First word?
 	*/
 	private function validMove_($placed_tiles, $direction)
 	{
@@ -107,19 +148,16 @@ class Game extends AppModel
 		
 		// In rack of active player?
 		// WORKS
-		$this->read();
-		$this->Player->id = $this->data['Game']['active_player'];
-		$this->Player->read();
-		$rack_tiles = strtoupper($this->Player->data['Player']['rack_tiles']);
+		$rack_tiles = $this->getActivePlayerRack_();
+		$letters = array();
 		foreach ($placed_tiles as $placed_tile)
 		{
-			if (strpos($rack_tiles, $placed_tile['letter']) === false)
-			{
-				$this->invalidity = 'E: letter!inrack ? rack:'.$rack_tiles.' ^ letter:'.$placed_tile['letter'];
-				return false;
-			}
-			$pos = strpos($rack_tiles, $placed_tile['letter']);
-			$rack_tiles = substr($rack_tiles, 0, $pos - 1) . substr($rack_tiles, $pos);
+			$letters []= $placed_tile['letter'];
+		}
+		if (!$this->haveLetters_($letters))
+		{
+			$this->invalidity = 'E: !have_letters ? rack:'.$rack_tiles.' ^ letters:'.implode('', $letters);
+			return false;
 		}
 		
 		// All in one dimension?
@@ -127,9 +165,26 @@ class Game extends AppModel
 		// Not nessecary, because of where $placed_tiles comes from ($this->playMove)
 		
 		// All connected?
-		// Connected to mainland?
+		// Connected to mainland? / First word?
 		// (I THINK this works..)
 		$mainland_connection = false;
+		if ($this->PlacedTile->getNumPlayedTiles($this->id) == 0)
+		{
+			// This is the first word -- therefore it must pass (7,7)
+			// We do not have to look for mainland anymore..
+			foreach ($placed_tiles as $coord)
+			{
+				if ($coord['x'] == 7 && $coord['y'] == 7)
+				{
+					$mainland_connection = true;
+				}
+			}
+			if (!$mainland_connection)
+			{
+				$this->invalidity = 'E: firstword!through(7,7)';
+				return false;
+			}
+		}
 		$variable_axis = ($direction == 'horizontal') ? 'x' : 'y';
 		$constant_axis = ($direction == 'horizontal') ? 'y' : 'x';
 		for ($i = 0; $i < count($placed_tiles) - 1; $i++)

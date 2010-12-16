@@ -20,6 +20,18 @@ class PlacedTile extends AppModel
 	}
 	
 	/**
+	 * Gets the number of played tiles on the board of the game with given ID
+	 */
+	function getNumPlayedTiles($game_id)
+	{
+		return $this->find('count', array(
+			'conditions' => array(
+				'game_id' => $game_id,
+			),
+		));
+	}
+	
+	/**
 	 * Check if all fields denoted by the given coords are empty, given game ID
 	 */
 	function allFieldsEmpty($game_id, $coords)

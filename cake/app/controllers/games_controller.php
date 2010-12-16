@@ -15,7 +15,8 @@ class GamesController extends AppController
 	{
 		$id = $this->Game->createGame(array(11,13,17,19));
 		$this->Game->id = $id;
-		$this->Game->playMove('KE(LLE)[y] B6 42');
+		$this->Game->playMove('AE(LLE) B6 42');
+		//$this->Game->playMove('exchange a');
 		die();
 	}
 	
