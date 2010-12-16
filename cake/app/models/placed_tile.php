@@ -20,6 +20,22 @@ class PlacedTile extends AppModel
 	}
 	
 	/**
+	 * Gets all placed letters
+	 */
+	function getPlacedLetters($game_id)
+	{
+		return array_values($this->find('list', array(
+			'fields' => array(
+				'PlacedTile.id',
+				'PlacedTile.letter',
+			),
+			'conditions' => array(
+				'PlacedTile.game_id' => $game_id,
+			)
+		)));
+	}
+	
+	/**
 	 * Gets the number of played tiles on the board of the game with given ID
 	 */
 	function getNumPlayedTiles($game_id)

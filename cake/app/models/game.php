@@ -20,6 +20,8 @@ class Game extends AppModel
 				# In rack of active player?
 				# All connected?
 				# Connected to mainland? / First word?
+			# Put tiles to board
+			# Change active player
 	*/
 	function playMove($notation)
 	{
@@ -33,11 +35,12 @@ class Game extends AppModel
 			$letters = strtoupper($matches['letters']);
 			if (!$this->haveLetters_($letters))
 			{
-				echo 'exchange error: have not letters!';
+				die('exchange error: have not letters!');
 			}
-			echo 'exchange rack("'. $this->getActivePlayerRack_() .'"): "'.$letters . '"';
+			// TODO $this->exchangeRackLetters($letters);
 		}
 		// This is really a word play -- let's analyse it!
+		// WORKS (quite sure)
 		elseif (1 == preg_match('/^(?<word>[a-zA-Z\(\)\[\]]+)[ ]+(?<initpos>[0-9]{1,2}[a-oA-O]|[a-oA-O][0-9]{1,2})([ ]+(?<score>[0-9]+))?$/', $notation, $matches))
 		{
 			// Catch $word and $initpos (in scrabble notation, e.g. D5 or 7K..) from regex matches
@@ -59,22 +62,83 @@ class Game extends AppModel
 					'y' => substr($initpos, 1),
 				);
 			}
+			
+			// Get placed tiles
 			$placed_tiles = $this->parsePlacedTiles_($word, $nullpos, $direction);
 			
+			// Do validity check
 			if (!$this->validMove_($placed_tiles, $direction))
 			{
 				die('INVALID, because: ' . $this->invalidity);
 			}
-			else
+			
+			// Put tiles to board
+			$this->PlacedTile->saveAll($placed_tiles);
+			
+			// Load active player
+			$this->read();
+			$this->Player->id = $this->data['Game']['active_player'];
+			$this->Player->read();
+			
+			// Remove placed tile letters from rack, get new letters
+			$rack = $this->Player->data['Player']['rack_tiles'];
+			$letters = '';
+			foreach ($placed_tiles as $placed_tile)
 			{
-				echo 'valid:';
+				$letters []= strtoupper($placed_tile['letter']);
 			}
+			$rack = implode($this->letterSubtract(str_split($rack), $letters));
+			$this->Player->set('rack_tiles', $rack);
+			$this->Player->save();
+			
+			// Get new letters, add to active player rack
+			$gameletters = str_shuffle(implode($this->getLeftOverGameLetters()));
+			$chosen = substr($gameletters, 0, count($placed_tiles));
+			$this->Player->set('rack_tiles', $rack . $chosen);
+			$this->Player->save();
+			
+			// Change active player
+			$this->set('active_player', $this->Player->data['Player']['next_player_id']);
+			$this->save();
 		}
 		else
 		{
 			echo 'INVALID<br />';
 			return false;
 		}
+	}
+	
+	function getLeftOverGameLetters()
+	{
+		return $this->letterSubtract(
+			$this->getAllLetters(),
+			array_merge(
+				$this->PlacedTile->getPlacedLetters($this->id),
+				$this->Player->getGameRackLetters($this->id)
+			)
+		);
+	}
+	
+	/**
+	 * Subtracts $less from $more
+	 * e.g. $less = array('a', 'a', 'b'); $more = array('a', 'b'); $returnvalue = array('a');
+	 * returns FALSE if not subtractable
+	 */
+	function letterSubtract($more, $less)
+	{
+		$more = str_split(strtoupper(implode($more)));
+		$less = str_split(strtoupper(implode($less)));
+		foreach ($less as $letter)
+		{
+			$key = array_search($letter, $more);
+			if ($key === false)
+			{
+				return false;
+			}
+			unset($more[$key]);
+		}
+		
+		return $more;
 	}
 	
 	// Checks if active player in this game has the given letters
@@ -86,16 +150,7 @@ class Game extends AppModel
 		{
 			$letters = str_split($letters);
 		}
-		foreach ($letters as $letter)
-		{
-			$key = array_search($letter, $rack);
-			if ($key === false)
-			{
-				return false;
-			}
-			unset($rack[$key]);
-		}
-		return true;
+		return ($this->letterSubtract($rack, $letters) !== false);
 	}
 	
 	// Gets the rack of the active player as an string of letters ("_" for blank)
@@ -288,17 +343,9 @@ class Game extends AppModel
 		return $placed_tiles;
 	}
 	
-	// Creates a new game with given, ordered, set of users as players
-	// Returns new game ID
-	function createGame($users)
+	function getAllLetters()
 	{
-		// Create game entry
-		$this->create();
-		$this->set('status', 'active');
-		$this->set('player_order', implode(',', $users));
-		$this->save();
-		
-		$tiles = str_shuffle(implode('', array(
+		return str_split(implode(array(
 			'__',
 			'eeeeeeeeeeee',
 			'aaaaaaaaa',
@@ -327,6 +374,19 @@ class Game extends AppModel
 			'q',
 			'z',
 		)));
+	}
+	
+	// Creates a new game with given, ordered, set of users as players
+	// Returns new game ID
+	function createGame($users)
+	{
+		// Create game entry
+		$this->create();
+		$this->set('status', 'active');
+		$this->set('player_order', implode(',', $users));
+		$this->save();
+		
+		$tiles = str_shuffle(implode($this->getAllLetters()));
 		
 		// Create player entries, with their rack tiles
 		foreach ($users as $i => $user_id)
@@ -343,6 +403,23 @@ class Game extends AppModel
 				$this->set('active_player', $this->Player->id);
 				$this->save();
 			}
+		}
+		// For each player, assign "next player"
+		$player_ids = array_values($this->Player->find('list', array(
+			'fields' => array(
+				'Player.user_id',
+				'Player.id',
+			),
+			'conditions' => array(
+				'game_id' => $this->id,
+			),
+			'order' => 'Player.id ASC',
+		)));
+		foreach ($player_ids as $i => $player_id)
+		{
+			$this->Player->id = $player_id;
+			$this->Player->set('next_player_id', $player_ids[($i+1) % count($player_ids)]);
+			$this->Player->save();
 		}
 		
 		return $this->id;
