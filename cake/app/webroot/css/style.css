@@ -1,0 +1,58 @@
+
+#scrabble {
+	margin:10px;
+}
+input#in {
+}
+#board {
+	position:relative;
+	border:2px solid #000;
+}
+.field,
+.field p,
+.field p span {
+	cursor:pointer;
+}
+.field {
+	position:absolute;
+	width:30px;
+	height:30px;
+	
+	background:#eee;
+}
+.field p {
+	margin:0 0 0 3px;
+	padding:0;
+	line-height:30px;
+	text-align:center;
+	
+	font-family:Helvetica, Arial, sans-serif;
+	text-transform:uppercase;
+	font-weight:bold;
+	font-size:18px;
+}
+.field p.blankletter {
+	margin:0;
+	line-height:28px;
+	text-transform:lowercase;
+	border:1px dashed #000;
+}
+.field p span {
+	font-weight:normal;
+	font-size:10px;
+}
+.field.at {
+	background:#D3D3D3;
+}
+.field.temporary {
+	background:#A9D5F2;
+}
+.field.temporary.at {
+	background:#45B0F7;
+}
+.field.permanent {
+	background:#FF9F1E;
+}
+.field.permanent.at {
+	background:#F76200;
+}

@@ -8,6 +8,17 @@ class Game extends AppModel
 		'PlacedTile',
 	);
 	
+	var $errors = array(
+		0 => 'Given play notation is incorrect!',
+		1 => 'You do not have the appropriate letters in your rack!',
+		2 => 'You cannot play more than 7 tiles in one go!',
+		3 => 'You didn\'t play any tile at all!',
+		4 => 'You placed tiles on fields that are not empty!',
+		5 => 'The first word of the game must pass the center field (H8)!',
+		6 => 'Not all tiles are connected!',
+		7 => 'The played word is not connected to already existing tiles!',
+	);
+	
 	// Plays move on current game by current player
 	// (Must only be called when $this->id is set)
 	/*
@@ -35,17 +46,25 @@ class Game extends AppModel
 			$letters = strtoupper($matches['letters']);
 			if (!$this->haveLetters_($letters))
 			{
-				die('exchange error: have not letters!');
+				return 1;
 			}
 			// TODO $this->exchangeRackLetters($letters);
 		}
 		// This is really a word play -- let's analyse it!
 		// WORKS (quite sure)
-		elseif (1 == preg_match('/^(?<word>[a-zA-Z\(\)\[\]]+)[ ]+(?<initpos>[0-9]{1,2}[a-oA-O]|[a-oA-O][0-9]{1,2})([ ]+(?<score>[0-9]+))?$/', $notation, $matches))
+		elseif (1 == preg_match('/^(((?<word1>[a-zA-Z\(\)\[\]]+)[ ]+(?<initpos1>[0-9]{1,2}[a-oA-O]|[a-oA-O][0-9]{1,2}))|((?<initpos2>[0-9]{1,2}[a-oA-O]|[a-oA-O][0-9]{1,2})[ ]+(?<word2>[a-zA-Z\(\)\[\]]+)))([ ]+(?<score>[0-9]+))?$/', $notation, $matches))
 		{
 			// Catch $word and $initpos (in scrabble notation, e.g. D5 or 7K..) from regex matches
-			$word    = $matches['word'];
-			$initpos = $matches['initpos'];
+			if (isset($matches['word1']) && !empty($matches['word1']))
+			{
+				$word    = $matches['word1'];
+				$initpos = $matches['initpos1'];
+			}
+			else
+			{
+				$word    = $matches['word2'];
+				$initpos = $matches['initpos2'];
+			}
 			// Find out direction from $initpos, then reconstruct $nullpos
 			$direction = in_array(substr($initpos, 1), str_split('0123456789')) ? 'vertical' : 'horizontal';
 			if ($direction == 'horizontal')
@@ -69,7 +88,7 @@ class Game extends AppModel
 			// Do validity check
 			if (!$this->validMove_($placed_tiles, $direction))
 			{
-				die('INVALID, because: ' . $this->invalidity);
+				return $this->errorcode;
 			}
 			
 			// Put tiles to board
@@ -79,6 +98,7 @@ class Game extends AppModel
 			$this->read();
 			$this->Player->id = $this->data['Game']['active_player'];
 			$this->Player->read();
+			
 			
 			// Remove placed tile letters from rack, get new letters
 			$rack = $this->Player->data['Player']['rack_tiles'];
@@ -93,18 +113,19 @@ class Game extends AppModel
 			
 			// Get new letters, add to active player rack
 			$gameletters = str_shuffle(implode($this->getLeftOverGameLetters()));
-			$chosen = substr($gameletters, 0, count($placed_tiles));
-			$this->Player->set('rack_tiles', $rack . $chosen);
+			$rack .= substr($gameletters, 0, count($placed_tiles));
+			$this->Player->set('rack_tiles', $rack);
 			$this->Player->save();
 			
 			// Change active player
+			$this->Player->read();
 			$this->set('active_player', $this->Player->data['Player']['next_player_id']);
 			$this->save();
+			return true;
 		}
 		else
 		{
-			echo 'INVALID<br />';
-			return false;
+			return 0;
 		}
 	}
 	
@@ -145,7 +166,7 @@ class Game extends AppModel
 	// Must be used within context of $this->id
 	function haveLetters_($letters)
 	{
-		$rack = str_split($this->getActivePlayerRack_());
+		$rack = str_split($this->getActivePlayerRack());
 		if (is_string($letters))
 		{
 			$letters = str_split($letters);
@@ -155,7 +176,7 @@ class Game extends AppModel
 	
 	// Gets the rack of the active player as an string of letters ("_" for blank)
 	// Must be used within context of $this->id
-	function getActivePlayerRack_()
+	function getActivePlayerRack()
 	{
 		$this->read(); // Get data of this game
 		$this->Player->id = $this->data['Game']['active_player'];
@@ -176,20 +197,18 @@ class Game extends AppModel
 	*/
 	private function validMove_($placed_tiles, $direction)
 	{
-		echo 'Start checking...<br />';
-		
 		// numTiles correct?
 		// WORKS
 		if (count($placed_tiles) > 7)
 		{
 			// Error: too many tiles placed -- it is not possible for the player to play so many tiles!
-			$this->invalidity = 'E: #tiles>7';
+			$this->errorcode = 2;
 			return false;
 		}
 		if (count($placed_tiles) < 1)
 		{
 			// Error: not one tile placed!
-			$this->invalidity = 'E: #tiles<7';
+			$this->errorcode = 3;
 			return false;
 		}
 		
@@ -197,13 +216,13 @@ class Game extends AppModel
 		// WORKS
 		if (!$this->PlacedTile->allFieldsEmpty($this->id, $placed_tiles))
 		{
-			$this->invalidity = 'E: !(fields=empty)';
+			$this->errorcode = 4;
 			return false;
 		}
 		
 		// In rack of active player?
 		// WORKS
-		$rack_tiles = $this->getActivePlayerRack_();
+		$rack_tiles = $this->getActivePlayerRack();
 		$letters = array();
 		foreach ($placed_tiles as $placed_tile)
 		{
@@ -211,7 +230,7 @@ class Game extends AppModel
 		}
 		if (!$this->haveLetters_($letters))
 		{
-			$this->invalidity = 'E: !have_letters ? rack:'.$rack_tiles.' ^ letters:'.implode('', $letters);
+			$this->errorcode = 1;
 			return false;
 		}
 		
@@ -236,7 +255,7 @@ class Game extends AppModel
 			}
 			if (!$mainland_connection)
 			{
-				$this->invalidity = 'E: firstword!through(7,7)';
+				$this->errorcode = 5;
 				return false;
 			}
 		}
@@ -256,7 +275,7 @@ class Game extends AppModel
 					);
 					if (!$this->PlacedTile->hasTile($this->id, $coord))
 					{
-						$this->invalidity = 'E: !tile ? ('.$coord['x'].','.$coord['y'].')';
+						$this->errorcode = 6;
 						return false;
 					}
 					$mainland_connection = true;
@@ -269,17 +288,22 @@ class Game extends AppModel
 		{
 			foreach ($placed_tiles as $coord)
 			{
-				if ($this->PlacedTile->hasTile($this->id, array('x' => $coord['x']  , 'y' => $coord['y']  )))
+				if (
+					$this->PlacedTile->hasTile($this->id, array('x' => $coord['x']-1, 'y' => $coord['y']  )) ||
+					$this->PlacedTile->hasTile($this->id, array('x' => $coord['x']+1, 'y' => $coord['y']  )) ||
+					$this->PlacedTile->hasTile($this->id, array('x' => $coord['x']  , 'y' => $coord['y']-1)) ||
+					$this->PlacedTile->hasTile($this->id, array('x' => $coord['x']  , 'y' => $coord['y']+1))
+				)
+				{
+					$mainland_connection = true;
 					continue;
-				if ($this->PlacedTile->hasTile($this->id, array('x' => $coord['x']+1, 'y' => $coord['y']  )))
-					continue;
-				if ($this->PlacedTile->hasTile($this->id, array('x' => $coord['x']  , 'y' => $coord['y']+1)))
-					continue;
-				if ($this->PlacedTile->hasTile($this->id, array('x' => $coord['x']+1, 'y' => $coord['y']+1)))
-					continue;
+				}
 			}
-			$this->invalidity = 'E: !mainland_connection';
-			return false;
+			if (!$mainland_connection)
+			{
+				$this->errorcode = 7;
+				return false;
+			}
 		}
 		
 		return true;
