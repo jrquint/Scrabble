@@ -7,6 +7,14 @@ class DashboardController extends AppController
 	
 	function index()
 	{
+		echo '<pre>';
+		$a = new LetterCollection('abcc');
+		$a->dump();
+		$b = new LetterCollection('dddccc');
+		$b->dump();
+		$c = $a->removeCollection($b);
+		$c->dump();
+		echo $c->size('neg');
 		die('test');
 	}
 }

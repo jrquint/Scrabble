@@ -7,6 +7,11 @@ class AppController extends Controller
 		'Session',
 		'Auth',
 	);
+	
+	function beforeFilter()
+	{
+		App::import('Vendor', 'LetterCollection');
+	}
 }
 
 ?>
