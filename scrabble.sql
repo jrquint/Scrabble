@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Dec 17, 2010 at 01:44 PM
+-- Generation Time: Dec 22, 2010 at 03:14 PM
 -- Server version: 5.1.41
 -- PHP Version: 5.3.1
 
@@ -29,16 +29,16 @@ CREATE TABLE IF NOT EXISTS `scrabble_games` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `status` varchar(50) NOT NULL DEFAULT 'active' COMMENT '''active'', ''completed''',
   `active_player` int(11) NOT NULL COMMENT 'ID of active player',
+  `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=2 ;
 
 --
 -- Dumping data for table `scrabble_games`
 --
 
-INSERT INTO `scrabble_games` (`id`, `status`, `active_player`) VALUES
-(1, 'active', 1),
-(2, 'active', 8);
+INSERT INTO `scrabble_games` (`id`, `status`, `active_player`, `created`) VALUES
+(1, 'active', 2, '0000-00-00 00:00:00');
 
 -- --------------------------------------------------------
 
@@ -74,21 +74,17 @@ CREATE TABLE IF NOT EXISTS `scrabble_placed_tiles` (
   `x` int(2) NOT NULL COMMENT '(0..14)',
   `y` int(2) NOT NULL COMMENT '(0..14)',
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=9 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=5 ;
 
 --
 -- Dumping data for table `scrabble_placed_tiles`
 --
 
 INSERT INTO `scrabble_placed_tiles` (`id`, `game_id`, `letter`, `blankletter`, `x`, `y`) VALUES
-(1, 2, 'E', '', 7, 7),
-(2, 2, 'N', '', 8, 7),
-(3, 2, 'O', '', 9, 7),
-(4, 2, 'G', '', 7, 8),
-(5, 2, 'A', '', 8, 8),
-(6, 2, 'R', '', 9, 8),
-(7, 2, 'T', '', 10, 7),
-(8, 2, 'U', '', 10, 8);
+(1, 1, 'I', '', 7, 7),
+(2, 1, 'M', '', 7, 8),
+(3, 1, 'M', '', 7, 9),
+(4, 1, 'O', '', 7, 10);
 
 -- --------------------------------------------------------
 
@@ -104,21 +100,15 @@ CREATE TABLE IF NOT EXISTS `scrabble_players` (
   `rack_tiles` varchar(7) NOT NULL DEFAULT '',
   `score` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=9 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
 
 --
 -- Dumping data for table `scrabble_players`
 --
 
 INSERT INTO `scrabble_players` (`id`, `user_id`, `next_player_id`, `game_id`, `rack_tiles`, `score`) VALUES
-(1, 11, 2, 1, 'loeewhg', 0),
-(2, 13, 3, 1, '_ieteer', 0),
-(3, 17, 4, 1, 'nvdgetm', 0),
-(4, 19, 1, 1, 'leivadi', 0),
-(5, 5, 6, 2, 'ODUOESA', 0),
-(6, 7, 7, 2, 'TEDZISI', 0),
-(7, 11, 8, 2, 'ELDOIHO', 0),
-(8, 13, 5, 2, 'ntwrenq', 0);
+(1, 1, 2, 1, 'BEILQRX', 0),
+(2, 2, 1, 1, 'ZRINNGN', 0);
 
 -- --------------------------------------------------------
 
@@ -140,8 +130,8 @@ CREATE TABLE IF NOT EXISTS `scrabble_users` (
 --
 
 INSERT INTO `scrabble_users` (`id`, `username`, `password`, `nickname`) VALUES
-(1, 'leslie', '47729bc833f312ecc3ffbca52cd0e13444b0c0c9', 'Leslie'),
-(2, 'susan', 'e35b3719aaf311f5f28d6b6ea77087f3ed860fa3', 'Susan');
+(1, 'leslie', '8da23f246cefdb47494326aa60982c25b6b772d4', 'Leslie'),
+(2, 'susan', 'db4be265f73c8f21e9230589a9e27cb6dd3657a9', 'Susan');
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
