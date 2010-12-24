@@ -8,7 +8,8 @@ class Game extends AppModel
 		'PlacedTile',
 	);
 	
-	var $errors = array(
+	public $errorcode = false;
+	public $errors = array(
 		0 => 'Given play notation is incorrect!',
 		1 => 'You do not have the appropriate letters in your rack!',
 		2 => 'You cannot play more than 7 tiles in one go!',
@@ -19,9 +20,68 @@ class Game extends AppModel
 		7 => 'The played word is not connected to already existing tiles!',
 	);
 	
-	function play($play_notation)
+	/**
+	 * Plays a turn given a play notation string.
+	 * Must be used in a game context.
+	 */
+	public function play($play_notation)
 	{
 		$inf = ScrabbleLogic::parsePlayNotation($play_notation);
+		if ($inf === false)
+		{
+			$this->errorcode = 0; // Error in notation
+			return false;
+		}
+		
+		if ($inf['type'] == 'pass')
+		{
+			return $this->_pass();
+		}
+		elseif ($inf['type'] == 'exchange')
+		{
+			return $this->_exchange($inf['letters']);
+		}
+		// else 'play'..
+		
+		// TODO
+		// * Valid move?
+		//    * * *...?
+		// * Calculate score
+		// * Put letters to board
+		// * New rack (letters)
+		// * Change active player: $this->_changeActivePlayer();
+	}
+	
+	/**
+	 * Passes a turn within a game context.
+	 */
+	private function _pass()
+	{
+		// TODO
+		// * Consequences?
+		// * Change active player: $this->_changeActivePlayer();
+		return true;
+	}
+	
+	/**
+	 * Exchanges letters within a game context.
+	 * @param {LetterCollection} $letters The collection of letters that are to be exchanged.
+	 */
+	private function _exchange($letters)
+	{
+		// TODO
+		// * Check if letters in rack
+		// * Change active player: $this->_changeActivePlayer();
+		return true;
+	}
+	
+	/**
+	 * Changes the active player within a game context.
+	 */
+	private function _changeActivePlayer()
+	{
+		// TODO
+		return true;
 	}
 	
 	// Plays move on current game by current player
@@ -39,148 +99,6 @@ class Game extends AppModel
 			# Put tiles to board
 			# Change active player
 	*/
-	function playMove($notation)
-	{
-		// First, let's analyse $notation
-		if ($notation == 'pass')
-		{
-			echo 'PASS<br />';
-		}
-		elseif (1 == preg_match('/^exchange (?<letters>[a-zA-Z_]{1,7})$/', $notation, $matches))
-		{
-			$letters = strtoupper($matches['letters']);
-			if (!$this->haveLetters_($letters))
-			{
-				return 1;
-			}
-			// TODO $this->exchangeRackLetters($letters);
-		}
-		// This is really a word play -- let's analyse it!
-		// WORKS (quite sure)
-		elseif (1 == preg_match('/^((?<word>[a-zA-Z\(\)\[\]]+)[ ]+(?<initpos>[0-9]{1,2}[a-oA-O]|[a-oA-O][0-9]{1,2}))([ ]+(?<score>[0-9]+))?$/', $notation, $matches))
-		{
-			// Catch $word and $initpos (in scrabble notation, e.g. D5 or 7K..) from regex matches
-			$word    = $matches['word1'];
-			$initpos = $matches['initpos1'];
-			
-			// Find out direction from $initpos, then reconstruct $nullpos
-			$direction = in_array(substr($initpos, 1), str_split('0123456789')) ? 'vertical' : 'horizontal';
-			if ($direction == 'horizontal')
-			{
-				$nullpos = array(
-					'x' => ord(strtoupper(substr($initpos, 1))) - 65,
-					'y' => substr($initpos, 0, 1),
-				);
-			}
-			else // vertical
-			{
-				$nullpos = array(
-					'x' => ord(strtoupper(substr($initpos, 0, 1))) - 65,
-					'y' => substr($initpos, 1),
-				);
-			}
-			
-			// Get placed tiles
-			$placed_tiles = $this->parsePlacedTiles_($word, $nullpos, $direction);
-			
-			// Do validity check
-			if (!$this->validMove_($placed_tiles, $direction))
-			{
-				return $this->errorcode;
-			}
-			
-			// Put tiles to board
-			$this->PlacedTile->saveAll($placed_tiles);
-			
-			// Load active player
-			$this->read();
-			$this->Player->id = $this->data['Game']['active_player'];
-			$this->Player->read();
-			
-			
-			// Remove placed tile letters from rack, get new letters
-			$rack = $this->Player->data['Player']['rack_tiles'];
-			$letters = '';
-			foreach ($placed_tiles as $placed_tile)
-			{
-				$letters []= strtoupper($placed_tile['letter']);
-			}
-			$rack = implode($this->letterSubtract(str_split($rack), $letters));
-			$this->Player->set('rack_tiles', $rack);
-			$this->Player->save();
-			
-			// Get new letters, add to active player rack
-			$gameletters = str_shuffle(implode($this->getLeftOverGameLetters()));
-			$rack .= substr($gameletters, 0, count($placed_tiles));
-			$this->Player->set('rack_tiles', $rack);
-			$this->Player->save();
-			
-			// Change active player
-			$this->Player->read();
-			$this->set('active_player', $this->Player->data['Player']['next_player_id']);
-			$this->save();
-			return true;
-		}
-		else
-		{
-			return 0;
-		}
-	}
-	
-	function getLeftOverGameLetters()
-	{
-		return $this->letterSubtract(
-			$this->getAllLetters(),
-			array_merge(
-				$this->PlacedTile->getPlacedLetters($this->id),
-				$this->Player->getGameRackLetters($this->id)
-			)
-		);
-	}
-	
-	/**
-	 * Subtracts $less from $more
-	 * e.g. $less = array('a', 'a', 'b'); $more = array('a', 'b'); $returnvalue = array('a');
-	 * returns FALSE if not subtractable
-	 */
-	function letterSubtract($more, $less)
-	{
-		$more = str_split(strtoupper(implode($more)));
-		$less = str_split(strtoupper(implode($less)));
-		foreach ($less as $letter)
-		{
-			$key = array_search($letter, $more);
-			if ($key === false)
-			{
-				return false;
-			}
-			unset($more[$key]);
-		}
-		
-		return $more;
-	}
-	
-	// Checks if active player in this game has the given letters
-	// Must be used within context of $this->id
-	function haveLetters_($letters)
-	{
-		$rack = str_split($this->getActivePlayerRack());
-		if (is_string($letters))
-		{
-			$letters = str_split($letters);
-		}
-		return ($this->letterSubtract($rack, $letters) !== false);
-	}
-	
-	// Gets the rack of the active player as an string of letters ("_" for blank)
-	// Must be used within context of $this->id
-	function getActivePlayerRack()
-	{
-		$this->read(); // Get data of this game
-		$this->Player->id = $this->data['Game']['active_player'];
-		$this->Player->read(); // Get active player data
-		return strtoupper($this->Player->data['Player']['rack_tiles']);
-	}
 	
 	// Checks validity of given "placed tiles" within the context of current game and active player
 	/*
