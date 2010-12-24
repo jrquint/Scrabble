@@ -35,23 +35,81 @@ class Game extends AppModel
 			return false;
 		}
 		
-		if ($inf['type'] == 'pass')
+		extract($inf);
+		/*
+			Pass?
+				$type           := 'pass'
+			Exchange?
+				$type           := 'exchange'
+				$letters        := a LetterCollection of letters to be exchanged
+			Play?
+				$type           := 'play'
+				$direction      := 'horizontal', 'vertical'
+				$initpos        := array('x' => ?, 'y' => ?)
+				$tiles          := array of "placed tile" row elements, although each missing the "game_id" field
+				$letters_needed := a LetterCollection of necessary letters for this play
+				$assumptions    := an array of coordinates of fields that are assumed to have permanent tiles
+				$notation       := the notation initially passed to ScrabbleLogic::parsePlayNotation()
+		*/
+		
+		// If Pass or Exchange, delegate to their resp. methods..
+		if ($type == 'pass')
 		{
 			return $this->_pass();
 		}
-		elseif ($inf['type'] == 'exchange')
+		elseif ($type == 'exchange')
 		{
-			return $this->_exchange($inf['letters']);
+			return $this->_exchange($letters);
 		}
-		// else 'play'..
 		
+		// Get player rack, and check if player has necessary letters
+		$this->read();
+		$this->Player->id = $this->data['Game']['active_player'];
+		$this->Player->read();
+		$rack = new LetterCollection($this->Player->data['Player']['rack_tiles']);
+		$rack = $rack->removeCollection($letters_needed);
+		if (!$rack->valid())
+		{
+			$this->errorcode = 1;
+			return false;
+		}
+		
+		// Calculate new rack, but do not save yet
+		$leftover = $this->_getLeftOverGameLetters();
+		$newrack = $rack->addCollection(new LetterCollection(substr(str_shuffle((string)$leftover), 0, min($letters_needed->size(), $leftover->size()))));
+		
+		// Valid move?
 		// TODO
-		// * Valid move?
-		//    * * *...?
-		// * Calculate score
-		// * Put letters to board
-		// * New rack (letters)
-		// * Change active player: $this->_changeActivePlayer();
+		
+		// Calculate score
+		// TODO
+		
+		// Put tiles to board
+		foreach ($tiles as $k => $v)
+		{
+			$tiles[$k]['game_id'] = $this->id;
+		}
+		$this->PlacedTile->saveAll($tiles);
+		
+		// Save new rack
+		$this->read();
+		$this->Player->id = $this->data['Game']['active_player'];
+		$this->Player->read();
+		$this->Player->set('rack_tiles', ((string)$newrack));
+		$this->Player->save();
+		
+		// Save move
+		$this->Move->create();
+		$this->Move->set('game_id', $this->id);
+		$this->Move->set('player_id', $this->data['Game']['active_player']);
+		$this->Move->set('notation', $notation);
+		$this->Move->save();
+		
+		// Change active player
+		$this->_changeActivePlayer();
+		
+		// Success
+		return true;
 	}
 	
 	/**
@@ -125,7 +183,7 @@ class Game extends AppModel
 	 */
 	private function _getLeftOverGameLetters()
 	{
-		$placed_letters = new LetterCollection($this->PlacedTile->find('list', array(
+		$placed_letters = new LetterCollection(implode($this->PlacedTile->find('list', array(
 			'fields' => array(
 				'PlacedTile.letter',
 				'PlacedTile.letter',
@@ -133,7 +191,7 @@ class Game extends AppModel
 			'conditions' => array(
 				'PlacedTile.game_id' => $this->id,
 			),
-		)));
+		))));
 		$rack_letters = $this->Player->getGameRackLetters($this->id);
 		
 		$leftover = LetterCollection::getScrabbleCollection();

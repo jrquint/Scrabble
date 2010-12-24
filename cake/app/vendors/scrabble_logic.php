@@ -38,6 +38,7 @@ abstract class ScrabbleLogic
 				'tiles' => $word_result['tiles'],
 				'letters_needed' => $word_result['letters_needed'],
 				'assumptions' => $word_result['assumptions'],
+				'notation' => $n,
 			);
 		}
 		else
@@ -60,7 +61,7 @@ abstract class ScrabbleLogic
 				'direction' => $dir,
 				'initpos' => array(
 					'x' => ord($dir == 'horizontal' ? substr($startat, 1) : substr($startat, 0, 1)) - 65,
-					'y' => ($dir == 'horizontal' ? substr($startat, 0, 1) : substr($startat, 1)),
+					'y' => ($dir == 'horizontal' ? substr($startat, 0, 1) : substr($startat, 1)) - 1,
 				),
 			);
 		}
@@ -70,7 +71,7 @@ abstract class ScrabbleLogic
 				'direction' => $dir,
 				'initpos' => array(
 					'x' => ord($dir == 'horizontal' ? substr($startat, 2) : substr($startat, 0, 1)) - 65,
-					'y' => ($dir == 'horizontal' ? substr($startat, 0, 2) : substr($startat, 1)),
+					'y' => ($dir == 'horizontal' ? substr($startat, 0, 2) : substr($startat, 1)) - 1,
 				),
 			);
 		}
@@ -121,10 +122,6 @@ abstract class ScrabbleLogic
 		{
 			$pos = $nullpos;
 			$pos[$variable_axis] += $i;
-			$coord = array(
-				'x' => $pos['x'],
-				'y' => $pos['y'],
-			);
 			if (strlen($letter) == 1)
 			{
 				$placed_tile = array();
@@ -135,11 +132,11 @@ abstract class ScrabbleLogic
 					$placed_tile['blankletter'] = strtoupper($letter);
 				}
 				$letters_needed .= $placed_tile['letter'];
-				$placed_tiles []= array_merge($coord, $placed_tile);
+				$placed_tiles []= array_merge($pos, $placed_tile);
 			}
 			else
 			{
-				$assumptions []= $coord;
+				$assumptions []= $pos;
 			}
 		}
 		
