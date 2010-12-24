@@ -28,7 +28,7 @@ class Player extends AppModel
 			$letters .= $rack;
 		}
 		
-		return str_split($letters);
+		return new LetterCollection($letters);
 	}
 }
 

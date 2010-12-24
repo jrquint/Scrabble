@@ -35,6 +35,14 @@ class LetterCollection
 	}
 	
 	/**
+	 * Returns the standard scrabble collection
+	 */
+	public static function getScrabbleCollection()
+	{
+		return new LetterCollection('eeeeeeeeeeeeaaaaaaaaaiiiiiiiiioooooooonnnnnnrrrrrrttttttllllssssuuuuddddgggbbccmmppffhhvvwwyykjxqz__');
+	}
+	
+	/**
 	 * Adds the specified letter, optionally multiple times
 	 */
 	public function add($letter, $num = 1)
@@ -122,6 +130,15 @@ class LetterCollection
 			}
 			return $size;
 		}
+	}
+	
+	/**
+	 * Checks whether this collection contains the given collection
+	 */
+	public function contains($lc)
+	{
+		$new = $this->removeCollection($lc);
+		return $new->valid();
 	}
 	
 	/**

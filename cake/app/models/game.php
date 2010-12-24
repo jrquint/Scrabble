@@ -6,6 +6,7 @@ class Game extends AppModel
 	var $hasMany = array(
 		'Player',
 		'PlacedTile',
+		'Move',
 	);
 	
 	public $errorcode = false;
@@ -18,6 +19,7 @@ class Game extends AppModel
 		5 => 'The first word of the game must pass the center field (H8)!',
 		6 => 'Not all tiles are connected!',
 		7 => 'The played word is not connected to already existing tiles!',
+		8 => 'There must be at least 7 tiles remaining in the sack to be able to exchange tiles!'
 	);
 	
 	/**
@@ -57,9 +59,17 @@ class Game extends AppModel
 	 */
 	private function _pass()
 	{
-		// TODO
-		// * Consequences?
-		// * Change active player: $this->_changeActivePlayer();
+		// Save move
+		$this->Move->create();
+		$this->Move->set('game_id', $this->id);
+		$this->Move->set('player_id', $this->data['Game']['active_player']);
+		$this->Move->set('notation', 'pass');
+		$this->Move->save();
+		
+		// Change active player
+		$this->_changeActivePlayer();
+		
+		// Success
 		return true;
 	}
 	
@@ -69,10 +79,67 @@ class Game extends AppModel
 	 */
 	private function _exchange($letters)
 	{
-		// TODO
-		// * Check if letters in rack
-		// * Change active player: $this->_changeActivePlayer();
+		// Exchange letters
+		$this->read();
+		$this->Player->id = $this->data['Game']['active_player'];
+		$this->Player->read();
+		$rack = new LetterCollection($this->Player->data['Player']['rack_tiles']);
+		$rack = $rack->removeCollection($letters);
+		if (!$rack->valid())
+		{
+			$this->errorcode = 1;
+			return false;
+		}
+		$leftover = $this->_getLeftOverGameLetters();
+		if ($leftover->size() < 7)
+		{
+			$this->errorcode = 8;
+			return false;
+		}
+		// And now we have the currently exchanged letters again..
+		$leftover = $leftover->addCollection($letters);
+		
+		// Add new random letters
+		$newrack = $rack->addCollection(new LetterCollection(substr(str_shuffle((string)$leftover), 0, $letters->size())));
+		$this->Player->set('rack_tiles', $newrack);
+		$this->Player->save();
+		
+		// Save move
+		$this->Move->create();
+		$this->Move->set('game_id', $this->id);
+		$this->Move->set('player_id', $this->data['Game']['active_player']);
+		$this->Move->set('notation', 'exchange '.((string)$letters));
+		$this->Move->save();
+		
+		// Change active player
+		$this->_changeActivePlayer();
+		
+		// Success
 		return true;
+	}
+	
+	/**
+	 * Gets the leftover game letters within game context, which are:
+	 * All scrabble letters - placed letters - rack letters of all players
+	 * .. as a LetterCollection.
+	 */
+	private function _getLeftOverGameLetters()
+	{
+		$placed_letters = new LetterCollection($this->PlacedTile->find('list', array(
+			'fields' => array(
+				'PlacedTile.letter',
+				'PlacedTile.letter',
+			),
+			'conditions' => array(
+				'PlacedTile.game_id' => $this->id,
+			),
+		)));
+		$rack_letters = $this->Player->getGameRackLetters($this->id);
+		
+		$leftover = LetterCollection::getScrabbleCollection();
+		$leftover = $leftover->removeCollection($placed_letters);
+		$leftover = $leftover->removeCollection($rack_letters);
+		return $leftover;
 	}
 	
 	/**
@@ -80,7 +147,14 @@ class Game extends AppModel
 	 */
 	private function _changeActivePlayer()
 	{
-		// TODO
+		// Get next player id, then save it to this game
+		$this->read();
+		$this->Player->id = $this->data['Game']['active_player'];
+		$this->Player->read();
+		$this->set('active_player', $this->Player->data['Player']['next_player_id']);
+		$this->save();
+		
+		// Success
 		return true;
 	}
 	
@@ -235,7 +309,7 @@ class Game extends AppModel
 		$this->set('player_order', implode(',', $users));
 		$this->save();
 		
-		$tiles = str_shuffle(implode($this->getAllLetters()));
+		$tiles = str_shuffle((string)LetterCollection::getScrabbleCollection());
 		
 		// Create player entries, with their rack tiles
 		foreach ($users as $i => $user_id)
@@ -272,6 +346,68 @@ class Game extends AppModel
 		}
 		
 		return $this->id;
+	}
+	
+	/**
+	 * Dumps all information on game within game context
+	 */
+	public function dump()
+	{
+		$this->read();
+		echo '<br /><span style="color:#c00;">Game Dump:</span><br />';
+		echo '| ID: '.$this->data['Game']['id'].'<br />';
+		echo '| Active Player: '.$this->data['Game']['active_player'].'<br />';
+		
+		echo '| Players:<br />';
+		$player_ids = array_values($this->Player->find('list', array(
+			'fields' => array(
+				'Player.user_id',
+				'Player.id',
+			),
+			'conditions' => array(
+				'game_id' => $this->id,
+			),
+			'order' => 'Player.id ASC',
+		)));
+		foreach ($player_ids as $player_id)
+		{
+			$this->Player->id = $player_id;
+			$this->Player->read();
+			echo '|  - '.$this->Player->data['Player']['id'].': User('.$this->Player->data['Player']['user_id'].') Rack('.$this->Player->data['Player']['rack_tiles'].')<br />';
+		}
+		
+		echo '| Board:<br />';
+		for ($y = 0; $y < 15; $y++)
+		{
+			echo '| ';
+			for ($x = 0; $x < 15; $x++)
+			{
+				$r = $this->PlacedTile->find('first', array(
+					'recursive' => 0,
+					'conditions' => array(
+						'PlacedTile.game_id' => $this->id,
+						'PlacedTile.x' => $x,
+						'PlacedTile.y' => $y,
+					),
+				));
+				if (empty($r))
+				{
+					echo ' . ';
+				}
+				else
+				{
+					if ($r['PlacedTile']['letter'] == '_')
+					{
+						echo '['.strtolower($r['PlacedTile']['blankletter']).']';
+					}
+					else
+					{
+						echo ' '.strtoupper($r['PlacedTile']['letter']).' ';
+					}
+				}
+			}
+			echo '<br />';
+		}
 	}
 }
 

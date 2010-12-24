@@ -12,7 +12,6 @@ abstract class ScrabbleLogic
 	 */
 	static function parsePlayNotation($n)
 	{
-		debug($n);
 		if ($n == 'pass')
 		{
 			return array('type' => 'pass');
