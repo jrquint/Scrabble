@@ -25,7 +25,7 @@ abstract class ScrabbleLogic
 			}
 			return array(
 				'type' => 'exchange',
-				'letters' => strtoupper($m['letters']),
+				'letters' => new LetterCollection(strtoupper($m['letters'])),
 			);
 		}
 		elseif (preg_match('/^(?<word>[a-z\[\]\(\)]+)[ ]+(?<startat>([0-9]{1}|1[0-4]{1})[a-oA-O]|[a-oA-O]([0-9]{1}|1[0-4]{1}))([ ]+(?<score>[0-9]+))?$/i', $n, $m))
@@ -37,6 +37,7 @@ abstract class ScrabbleLogic
 				'direction' => $startat_result['direction'],
 				'initpos' => $startat_result['initpos'],
 				'tiles' => $word_result['tiles'],
+				'letters_needed' => $word_result['letters_needed'],
 				'assumptions' => $word_result['assumptions'],
 			);
 		}
@@ -78,8 +79,10 @@ abstract class ScrabbleLogic
 	
 	/**
 	 * Parses a scrabble notation word (such as "SC(RAB)BL[ew]ORD") and
-	 * returns "tiles" array (as would be save in the placed_tiles table)
-	 * and "assumptions" array (fields that are assumed to contain a permanent tile)
+	 * returns all kinds of information about it, including:
+	 * - "tiles", an array (as would be save in the placed_tiles table, except that each element misses the "game_id" field)
+	 * - "assumptions", an array (fields-coordinates that are assumed to contain a permanent tile)
+	 * - "letters_needed", a LetterCollection that contains all the letters needed to place this word
 	 */
 	static function parseWord($word, $nullpos, $direction)
 	{
@@ -114,6 +117,7 @@ abstract class ScrabbleLogic
 		// Get placed tiles
 		$placed_tiles = array();
 		$assumptions = array();
+		$letters_needed = '';
 		foreach ($parts as $i => $letter)
 		{
 			$pos = $nullpos;
@@ -131,6 +135,7 @@ abstract class ScrabbleLogic
 					$placed_tile['letter'] = '_';
 					$placed_tile['blankletter'] = strtoupper($letter);
 				}
+				$letters_needed .= $placed_tile['letter'];
 				$placed_tiles []= array_merge($coord, $placed_tile);
 			}
 			else
@@ -142,6 +147,7 @@ abstract class ScrabbleLogic
 		return array(
 			'tiles' => $placed_tiles,
 			'assumptions' => $assumptions,
+			'letters_needed' => new LetterCollection($letters_needed),
 		);
 	}
 }
