@@ -11,6 +11,7 @@ class AppController extends Controller
 	function beforeFilter()
 	{
 		App::import('Vendor', 'LetterCollection');
+		App::import('Vendor', 'ScrabbleLogic');
 	}
 }
 

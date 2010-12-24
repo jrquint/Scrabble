@@ -19,6 +19,11 @@ class Game extends AppModel
 		7 => 'The played word is not connected to already existing tiles!',
 	);
 	
+	function play($play_notation)
+	{
+		$inf = ScrabbleLogic::parsePlayNotation($play_notation);
+	}
+	
 	// Plays move on current game by current player
 	// (Must only be called when $this->id is set)
 	/*
@@ -52,19 +57,12 @@ class Game extends AppModel
 		}
 		// This is really a word play -- let's analyse it!
 		// WORKS (quite sure)
-		elseif (1 == preg_match('/^(((?<word1>[a-zA-Z\(\)\[\]]+)[ ]+(?<initpos1>[0-9]{1,2}[a-oA-O]|[a-oA-O][0-9]{1,2}))|((?<initpos2>[0-9]{1,2}[a-oA-O]|[a-oA-O][0-9]{1,2})[ ]+(?<word2>[a-zA-Z\(\)\[\]]+)))([ ]+(?<score>[0-9]+))?$/', $notation, $matches))
+		elseif (1 == preg_match('/^((?<word>[a-zA-Z\(\)\[\]]+)[ ]+(?<initpos>[0-9]{1,2}[a-oA-O]|[a-oA-O][0-9]{1,2}))([ ]+(?<score>[0-9]+))?$/', $notation, $matches))
 		{
 			// Catch $word and $initpos (in scrabble notation, e.g. D5 or 7K..) from regex matches
-			if (isset($matches['word1']) && !empty($matches['word1']))
-			{
-				$word    = $matches['word1'];
-				$initpos = $matches['initpos1'];
-			}
-			else
-			{
-				$word    = $matches['word2'];
-				$initpos = $matches['initpos2'];
-			}
+			$word    = $matches['word1'];
+			$initpos = $matches['initpos1'];
+			
 			// Find out direction from $initpos, then reconstruct $nullpos
 			$direction = in_array(substr($initpos, 1), str_split('0123456789')) ? 'vertical' : 'horizontal';
 			if ($direction == 'horizontal')
