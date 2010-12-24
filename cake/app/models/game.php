@@ -16,10 +16,13 @@ class Game extends AppModel
 		2 => 'You cannot play more than 7 tiles in one go!',
 		3 => 'You didn\'t play any tile at all!',
 		4 => 'You placed tiles on fields that are not empty!',
-		5 => 'The first word of the game must pass the center field (H8)!',
+		5 => 'The first word of the game must pass the center field (H8 or 8H)!',
 		6 => 'Not all tiles are connected!',
 		7 => 'The played word is not connected to already existing tiles!',
-		8 => 'There must be at least 7 tiles remaining in the sack to be able to exchange tiles!'
+		8 => 'There must be at least 7 tiles remaining in the sack to be able to exchange tiles!',
+		9 => 'There are no tiles on the board yet that you can use in your word!',
+		10 => 'A field that was assumed to have a tile doesn\'t have one!',
+		11 => 'The word extends out of the board, which is not possible!',
 	);
 	
 	/**
@@ -49,6 +52,11 @@ class Game extends AppModel
 				$tiles          := array of "placed tile" row elements, although each missing the "game_id" field
 				$letters_needed := a LetterCollection of necessary letters for this play
 				$assumptions    := an array of coordinates of fields that are assumed to have permanent tiles
+				$passes_center_field
+				                := a boolean value indicating if the word passes the center field
+				$mainland_connectors
+								:= an array of all field coordinates that could that could imply a mainland connection
+				$out_of_bounds  := a boolean value indicating if the word is out of bounds
 				$notation       := the notation initially passed to ScrabbleLogic::parsePlayNotation()
 		*/
 		
@@ -60,6 +68,13 @@ class Game extends AppModel
 		elseif ($type == 'exchange')
 		{
 			return $this->_exchange($letters);
+		}
+		
+		// First check: if word is out of bounds, then it must no be accepted whatsoever..
+		if ($out_of_bounds)
+		{
+			$this->errorcode = 11;
+			return false;
 		}
 		
 		// Get player rack, and check if player has necessary letters
@@ -79,7 +94,92 @@ class Game extends AppModel
 		$newrack = $rack->addCollection(new LetterCollection(substr(str_shuffle((string)$leftover), 0, min($letters_needed->size(), $leftover->size()))));
 		
 		// Valid move?
-		// TODO
+		$c = $this->PlacedTile->find('count', array(
+			'conditions' => array(
+				'PlacedTile.game_id' => $this->id,
+			),
+		));
+		if ($c == 0)
+		{
+			// First word
+			if (!empty($assumptions))
+			{
+				$this->errorcode = 9;
+				return false;
+			}
+			if (!$passes_center_field)
+			{
+				$this->errorcode = 5;
+				return false;
+			}
+		}
+		else
+		{
+			// All fields empty?
+			foreach ($tiles as $tile)
+			{
+				$r = $this->PlacedTile->find('count', array(
+					'conditions' => array(
+						'PlacedTile.game_id' => $this->id,
+						'PlacedTile.x' => $tile['x'],
+						'PlacedTile.y' => $tile['y'],
+					),
+				));
+				if ($r > 0)
+				{
+					$this->errorcode = 4;
+					return false;
+				}
+			}
+			
+			// If there are assumptions, then we can conclude that mainland
+			// connection is made (assuming the assumptions are confirmed),
+			// and if not, then we needn't check them in the first place!
+			if (empty($assumptions))
+			{
+				// Check for mainland connection
+				$mainland_connection = false;
+				foreach ($mainland_connectors as $i => $coord)
+				{
+					$r = $this->PlacedTile->find('count', array(
+						'conditions' => array(
+							'PlacedTile.game_id' => $this->id,
+							'PlacedTile.x' => $coord['x'],
+							'PlacedTile.y' => $coord['y'],
+						),
+					));
+					if ($r > 0)
+					{
+						$mainland_connection = true;
+						break;
+					}
+				}
+				if (!$mainland_connection)
+				{
+					$this->errorcode = 7;
+					return false;
+				}
+			}
+			else
+			{
+				// Check assumptions
+				foreach ($assumptions as $coord)
+				{
+					$r = $this->PlacedTile->find('count', array(
+						'conditions' => array(
+							'PlacedTile.game_id' => $this->id,
+							'PlacedTile.x' => $coord['x'],
+							'PlacedTile.y' => $coord['y'],
+						),
+					));
+					if ($r == 0)
+					{
+						$this->errorcode = 10;
+						return false;
+					}
+				}
+			}
+		}
 		
 		// Calculate score
 		// TODO
@@ -213,147 +313,6 @@ class Game extends AppModel
 		$this->save();
 		
 		// Success
-		return true;
-	}
-	
-	// Plays move on current game by current player
-	// (Must only be called when $this->id is set)
-	/*
-		switch? Pass
-		switch? Move
-			# Get $word, $nullpos, $direction
-			# Get $placed_tiles
-			# Checks:
-				# All fields empty?
-				# In rack of active player?
-				# All connected?
-				# Connected to mainland? / First word?
-			# Put tiles to board
-			# Change active player
-	*/
-	
-	// Checks validity of given "placed tiles" within the context of current game and active player
-	/*
-		WORKS! (quite sure..)
-		# Checks:
-			# numTiles correct?
-			# All fields empty?
-			# In rack of active player?
-			# All in one dimension?
-			# All connected?
-			# Connected to mainland? / First word?
-	*/
-	private function validMove_($placed_tiles, $direction)
-	{
-		// numTiles correct?
-		// WORKS
-		if (count($placed_tiles) > 7)
-		{
-			// Error: too many tiles placed -- it is not possible for the player to play so many tiles!
-			$this->errorcode = 2;
-			return false;
-		}
-		if (count($placed_tiles) < 1)
-		{
-			// Error: not one tile placed!
-			$this->errorcode = 3;
-			return false;
-		}
-		
-		// All fields empty?
-		// WORKS
-		if (!$this->PlacedTile->allFieldsEmpty($this->id, $placed_tiles))
-		{
-			$this->errorcode = 4;
-			return false;
-		}
-		
-		// In rack of active player?
-		// WORKS
-		$rack_tiles = $this->getActivePlayerRack();
-		$letters = array();
-		foreach ($placed_tiles as $placed_tile)
-		{
-			$letters []= $placed_tile['letter'];
-		}
-		if (!$this->haveLetters_($letters))
-		{
-			$this->errorcode = 1;
-			return false;
-		}
-		
-		// All in one dimension?
-		// WORKS:
-		// Not nessecary, because of where $placed_tiles comes from ($this->playMove)
-		
-		// All connected?
-		// Connected to mainland? / First word?
-		// (I THINK this works..)
-		$mainland_connection = false;
-		if ($this->PlacedTile->getNumPlayedTiles($this->id) == 0)
-		{
-			// This is the first word -- therefore it must pass (7,7)
-			// We do not have to look for mainland anymore..
-			foreach ($placed_tiles as $coord)
-			{
-				if ($coord['x'] == 7 && $coord['y'] == 7)
-				{
-					$mainland_connection = true;
-				}
-			}
-			if (!$mainland_connection)
-			{
-				$this->errorcode = 5;
-				return false;
-			}
-		}
-		$variable_axis = ($direction == 'horizontal') ? 'x' : 'y';
-		$constant_axis = ($direction == 'horizontal') ? 'y' : 'x';
-		for ($i = 0; $i < count($placed_tiles) - 1; $i++)
-		{
-			if ($placed_tiles[$i][$variable_axis] < $placed_tiles[$i+1][$variable_axis] - 1)
-			{
-				// --> there are missing placed tiles here
-				// --> these were assumed to be permanent tiles -- let's check them
-				for ($checkvar = $placed_tiles[$i][$variable_axis] + 1; $checkvar <= $placed_tiles[$i+1][$variable_axis] - 1; $checkvar++)
-				{
-					$coord = array(
-						$variable_axis => $checkvar,
-						$constant_axis => $placed_tiles[0][$constant_axis],
-					);
-					if (!$this->PlacedTile->hasTile($this->id, $coord))
-					{
-						$this->errorcode = 6;
-						return false;
-					}
-					$mainland_connection = true;
-				}
-			}
-		}
-		// If we haven't found a mainland connection yet, then we'll
-		// have to do the tedious task of checking all neighbours anyway...
-		if (!$mainland_connection)
-		{
-			foreach ($placed_tiles as $coord)
-			{
-				if (
-					$this->PlacedTile->hasTile($this->id, array('x' => $coord['x']-1, 'y' => $coord['y']  )) ||
-					$this->PlacedTile->hasTile($this->id, array('x' => $coord['x']+1, 'y' => $coord['y']  )) ||
-					$this->PlacedTile->hasTile($this->id, array('x' => $coord['x']  , 'y' => $coord['y']-1)) ||
-					$this->PlacedTile->hasTile($this->id, array('x' => $coord['x']  , 'y' => $coord['y']+1))
-				)
-				{
-					$mainland_connection = true;
-					continue;
-				}
-			}
-			if (!$mainland_connection)
-			{
-				$this->errorcode = 7;
-				return false;
-			}
-		}
-		
 		return true;
 	}
 	

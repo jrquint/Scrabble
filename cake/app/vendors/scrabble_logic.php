@@ -32,13 +32,16 @@ abstract class ScrabbleLogic
 			$startat_result = self::parseStartAt($m['startat']);
 			$word_result = self::parseWord($m['word'], $startat_result['initpos'], $startat_result['direction']);
 			return array(
-				'type' => 'play',
-				'direction' => $startat_result['direction'],
-				'initpos' => $startat_result['initpos'],
-				'tiles' => $word_result['tiles'],
-				'letters_needed' => $word_result['letters_needed'],
-				'assumptions' => $word_result['assumptions'],
-				'notation' => $n,
+				'type'                => 'play',
+				'direction'           => $startat_result['direction'],
+				'initpos'             => $startat_result['initpos'],
+				'tiles'               => $word_result['tiles'],
+				'letters_needed'      => $word_result['letters_needed'],
+				'assumptions'         => $word_result['assumptions'],
+				'passes_center_field' => $word_result['passes_center_field'],
+				'mainland_connectors' => $word_result['mainland_connectors'],
+				'out_of_bounds'       => $word_result['out_of_bounds'],
+				'notation'            => $n,
 			);
 		}
 		else
@@ -88,6 +91,7 @@ abstract class ScrabbleLogic
 	{
 		// Determine variable axis based on direction
 		$variable_axis = ($direction == 'horizontal') ? 'x' : 'y';
+		$constant_axis = ($direction == 'horizontal') ? 'y' : 'x';
 		
 		// Change all '(ABC)' to '(A)(B)(C)'
 		do
@@ -115,13 +119,24 @@ abstract class ScrabbleLogic
 		}
 		
 		// Get placed tiles
+		$passes_center_field = false;
+		$out_of_bounds = false;
 		$placed_tiles = array();
 		$assumptions = array();
 		$letters_needed = '';
+		$mainland_connectors = array();
 		foreach ($parts as $i => $letter)
 		{
 			$pos = $nullpos;
 			$pos[$variable_axis] += $i;
+			if ($pos['x'] == 7 && $pos['y'] == 7)
+			{
+				$passes_center_field = true;
+			}
+			if ($pos['x'] > 14 || $pos['y'] > 14)
+			{
+				$out_of_bounds = true;
+			}
 			if (strlen($letter) == 1)
 			{
 				$placed_tile = array();
@@ -133,6 +148,15 @@ abstract class ScrabbleLogic
 				}
 				$letters_needed .= $placed_tile['letter'];
 				$placed_tiles []= array_merge($pos, $placed_tile);
+				
+				$mainland_connectors []= array(
+					$variable_axis => $pos[$variable_axis],
+					$constant_axis => $pos[$constant_axis] - 1,
+				);
+				$mainland_connectors []= array(
+					$variable_axis => $pos[$variable_axis],
+					$constant_axis => $pos[$constant_axis] + 1,
+				);
 			}
 			else
 			{
@@ -140,10 +164,25 @@ abstract class ScrabbleLogic
 			}
 		}
 		
+		$before_first = $placed_tiles[0];
+		$before_first[$variable_axis]--;
+		$mainland_connectors []= $before_first;
+		
+		$after_last = $placed_tiles[count($placed_tiles) - 1];
+		$after_last[$variable_axis]++;
+		$mainland_connectors []= $after_last;
+		
+		// NOTE: We do not have to care about mainland connectors that are out of bounds,
+		// because when they are checked, no tiles will show up, which corresponds with
+		// the logical idea that they are actually not mainland connectors at all..
+		
 		return array(
 			'tiles' => $placed_tiles,
 			'assumptions' => $assumptions,
 			'letters_needed' => new LetterCollection($letters_needed),
+			'mainland_connectors' => $mainland_connectors,
+			'out_of_bounds' => $out_of_bounds,
+			'passes_center_field' => $passes_center_field,
 		);
 	}
 }
