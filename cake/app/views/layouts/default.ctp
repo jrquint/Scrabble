@@ -10,9 +10,16 @@
 </head>
 <body>
 
-<div class="top">
+<p class="top">
 	<a class="logo" href="<?php echo $html->url('/');?>">Scrabble!</a>
-</div>
+	<?php if ($session->check('Auth.User')):?>
+		<span class="sep">&ndash;</span>
+		Welcome back, <strong><?php echo $session->read('Auth.User.nickname');?></strong>!
+		<span class="sep">&ndash;</span>
+		<a href="<?php echo $html->url('/users/logout');?>">Log Out</a>
+	<?php else:?>
+	<?php endif;?>
+</p>
 
 <?php echo $content_for_layout;?>
 

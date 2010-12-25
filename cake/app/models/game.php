@@ -183,6 +183,7 @@ class Game extends AppModel
 		
 		// Calculate score
 		// TODO
+		$score = 1;
 		
 		// Put tiles to board
 		foreach ($tiles as $k => $v)
@@ -191,11 +192,12 @@ class Game extends AppModel
 		}
 		$this->PlacedTile->saveAll($tiles);
 		
-		// Save new rack
+		// Save new rack & score
 		$this->read();
 		$this->Player->id = $this->data['Game']['active_player'];
 		$this->Player->read();
 		$this->Player->set('rack_tiles', ((string)$newrack));
+		$this->Player->set('score', $this->Player->data['Player']['score'] + $score);
 		$this->Player->save();
 		
 		// Save move
@@ -203,6 +205,7 @@ class Game extends AppModel
 		$this->Move->set('game_id', $this->id);
 		$this->Move->set('player_id', $this->data['Game']['active_player']);
 		$this->Move->set('notation', $notation);
+		$this->Move->set('score', $score);
 		$this->Move->save();
 		
 		// Change active player

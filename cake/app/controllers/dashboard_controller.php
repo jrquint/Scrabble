@@ -11,26 +11,33 @@ class DashboardController extends AppController
 		'Move',
 	);
 	
-	function index($notation = '')
+	function index()
 	{
-		echo '<pre>';
-		$this->Game->id = 1;
-		$this->Game->dump();
-		if ($notation != '')
-		{
-			echo '<br />Play: <strong>'.$notation.'</strong><br />';
-			$r = $this->Game->play($notation);
-			if ($r === true)
-			{
-				$this->Game->dump();
-			}
-			else
-			{
-				echo 'Error('.$this->Game->errorcode.'): <strong>'.$this->Game->errors[$this->Game->errorcode].'</strong><br />';
-			}
-		}
+		$game_ids = $this->Player->find('list', array(
+			'fields' => array(
+				'Player.game_id',
+				'Player.game_id',
+			),
+			'conditions' => array(
+				'Player.user_id' => $this->Session->read('Auth.User.id'),
+			),
+		));
 		
-		die();
+		// Get active games
+		$this->set('your_active_games', $this->Game->find('all', array(
+			'conditions' => array(
+				'Game.id' => $game_ids,
+				'Game.status' => 'active',
+			),
+		)));
+		
+		// Get history games
+		$this->set('your_history_games', $this->Game->find('all', array(
+			'conditions' => array(
+				'Game.id' => $game_ids,
+				'Game.status !=' => 'active',
+			),
+		)));
 	}
 }
 

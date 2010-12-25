@@ -1,7 +1,7 @@
 
 <div class="left">
 	<?php if ($active_player['Player']['user_id'] == $session->read('Auth.User.id')):?>
-		<h3>It's your turn!</h3>
+		<h3>It's <span class="accent">your</span> turn!</h3>
 		<p class="key_value">
 			<span class="key">Your tiles: <a class="shuffle" href="#" onclick="return !shuffle_player_tiles();">(shuffle)</a></span>
 		</p>
@@ -29,7 +29,7 @@
 			</span>
 		</p>
 	<?php else:?>
-		<h3>It's <?php echo $active_player['User']['nickname'];?>'s turn!</h3>
+		<h3>It's <span class="accent"><?php echo $active_player['User']['nickname'];?></span>'s turn!</h3>
 		<p class="key_value">
 			<span class="key">Your tiles: <a class="shuffle" href="#" onclick="return !shuffle_player_tiles();">(shuffle)</a></span>
 		</p>

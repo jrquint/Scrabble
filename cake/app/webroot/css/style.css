@@ -6,6 +6,12 @@ html, body, table, tr, td, th, ol, ul, dl, li, dd, dt, p, h1, h2, h3, h4, h5, h6
 	list-style:none;
 }
 
+/* General Type */
+body {
+	font-family:Helvetica, Arial, sans-serif;
+	font-size:14px;
+}
+
 /* Page layout */
 body {
 	background:#fff url(../img/background.png) repeat top left;
@@ -27,6 +33,18 @@ body {
 }
 .top {
 	margin:10px;
+	
+	color:#444;
+	font-size:14px;
+}
+.top .sep {
+	color:#ccc;
+}
+.top a {
+	color:#444;
+}
+.top a:hover {
+	color:#000;
 }
 .top a.logo {
 	font-family:Georgia, "Times new Roman", serif;
@@ -41,14 +59,26 @@ body {
 .left {
 	float:left;
 	width:250px;
-	padding:0 10px;
+	padding:0 10px 20px 10px;
 	
-	height:400px;
 	background:#443629;
 	color:#fff;
 }
 .main {
 	margin-left:280px;
+}
+
+/* Login */
+.left.login {
+	padding-left:100px;
+}
+.left.login label {
+	display:inline-block;
+	width:80px;
+}
+.left.login .text input,
+.left.login .password input {
+	width:120px;
 }
 
 /* Scrabble layout > Left */
@@ -57,7 +87,10 @@ body {
 	font-family:Georgia, "Times new Roman", serif;
 	font-size:18px;
 	font-weight:bold;
-	text-align:center;
+	text-align:left;
+}
+.left h3 .accent {
+	text-decoration:underline;
 }
 .left p.key_value {
 	margin:5px 0;
