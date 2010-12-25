@@ -197,11 +197,11 @@ var ScrabbleGame = new Class(
 		// Append direction and first coordinate to notation
 		if (constant_coord == 'x')
 		{
-			notation += ' '+ String.fromCharCode(65+tmp[0][constant_coord]) + minbound;
+			notation += ' '+ String.fromCharCode(65+tmp[0][constant_coord]) + (minbound + 1).toString();
 		}
 		else
 		{
-			notation += ' '+ tmp[0][constant_coord] + String.fromCharCode(65+minbound);
+			notation += ' '+ (tmp[0][constant_coord] + 1).toString() + String.fromCharCode(65+minbound);
 		}
 		
 		// Append score to notation
