@@ -6,6 +6,7 @@
 	<script type="text/javascript" src="<?php echo $html->url('/js/mootools-more.js');?>"></script>
 	<script type="text/javascript" src="<?php echo $html->url('/js/board_manager.js');?>"></script>
 	<script type="text/javascript" src="<?php echo $html->url('/js/scrabble_game.js');?>"></script>
+	<script type="text/javascript" src="<?php echo $html->url('/js/seedrandom-min.js');?>"></script>
 </head>
 <body>
 

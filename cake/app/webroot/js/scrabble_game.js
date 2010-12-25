@@ -21,6 +21,8 @@ var ScrabbleGame = new Class(
 		this.submit_form = $(submit_form);
 		this.notation_element = $(notation_element);
 		
+		this.active = false;
+		
 		// Create board div, then startup board manager object
 		var board = (new Element('div', {id: 'board'})).inject(this.el, 'bottom');
 		this.boardManager = new BoardManager(board);
@@ -78,6 +80,14 @@ var ScrabbleGame = new Class(
 	},
 	
 	/**
+	 * Activates word submit
+	 */
+	activateSubmit: function()
+	{
+		this.active = true;
+	},
+	
+	/**
 	 * User wants to escape from current activity
 	 */
 	escape: function()
@@ -115,14 +125,31 @@ var ScrabbleGame = new Class(
 	 */
 	submit: function()
 	{
+		if (!this.active) return false;
+		
 		if (!this.boardManager.isValid())
 		{
-			alert('not valid!');
-			return false;
+			this.notation_element.set('value', 'INVALID!');
+			this.submit_form.submit();
 		}
 		
 		this.notation_element.set('value', this.getPlayNotation_());
 		this.submit_form.submit();
+		
+		return true;
+	},
+	
+	/**
+	 * User wants to pass turn
+	 */
+	pass: function()
+	{
+		if (!this.active) return false;
+		
+		this.notation_element.set('value', 'pass');
+		this.submit_form.submit();
+		
+		return true;
 	},
 	
 	/**

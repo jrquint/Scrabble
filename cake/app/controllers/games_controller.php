@@ -73,6 +73,20 @@ class GamesController extends AppController
 		$this->Player->read();
 		$this->set('active_player', $this->Player->data);
 		
+		// Get all players
+		$r = $this->Player->find('all', array(
+			'recursive' => 1,
+			'conditions' => array(
+				'Player.game_id' => $this->Game->id,
+			),
+		));
+		$players = array();
+		foreach ($r as $player)
+		{
+			$players[$player['User']['id']] = $player;
+		}
+		$this->set('players', $players);
+		
 		// $tiles for board element
 		$this->set('tiles', $this->Game->data['PlacedTile']);
 	}

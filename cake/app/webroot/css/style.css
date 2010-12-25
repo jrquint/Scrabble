@@ -7,6 +7,9 @@ html, body, table, tr, td, th, ol, ul, dl, li, dd, dt, p, h1, h2, h3, h4, h5, h6
 }
 
 /* Page layout */
+body {
+	background:#fff url(../img/background.png) repeat top left;
+}
 .all_flash {
 	position:absolute;
 	top:10px;
@@ -17,7 +20,7 @@ html, body, table, tr, td, th, ol, ul, dl, li, dd, dt, p, h1, h2, h3, h4, h5, h6
 	font-family:Helvetica, Arial, sans-serif;
 	font-size:20px;
 	font-weight:bold;
-	color:#000;
+	color:#fff;
 	text-align:right;
 	
 	background:#D8005D;
@@ -37,20 +40,20 @@ html, body, table, tr, td, th, ol, ul, dl, li, dd, dt, p, h1, h2, h3, h4, h5, h6
 }
 .left {
 	float:left;
-	width:180px;
-	padding:15px 10px;
+	width:250px;
+	padding:0 10px;
 	
 	height:400px;
 	background:#443629;
 	color:#fff;
 }
 .main {
-	margin-left:210px;
+	margin-left:280px;
 }
 
 /* Scrabble layout > Left */
-.left p.your_turn {
-	margin:0 0 10px 0;
+.left h3 {
+	margin:20px 0 10px 0;
 	font-family:Georgia, "Times new Roman", serif;
 	font-size:18px;
 	font-weight:bold;
@@ -63,13 +66,23 @@ html, body, table, tr, td, th, ol, ul, dl, li, dd, dt, p, h1, h2, h3, h4, h5, h6
 	font-weight:bold;
 	color:#FF8800;
 }
+.left p.key_value .little,
+.left p.key_value a.shuffle {
+	color:#fff;
+	text-decoration:none;
+	font-size:12px;
+}
 .left p.key_value .value {
-	font-size:18px;
+	font-size:15px;
+	color:#fff;
+}
+.left a.scrabble_submit {
+	text-align:center;
 	color:#fff;
 }
 .left .tile {
 	float:left;
-	margin:0 0 5px 5px;
+	margin:0 0 4px 4px;
 	width:30px;
 	height:30px;
 	

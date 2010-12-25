@@ -1,32 +1,58 @@
 
 <div class="left">
 	<?php if ($active_player['Player']['user_id'] == $session->read('Auth.User.id')):?>
-		<p class="your_turn">
-			It's your turn!
-		</p>
+		<h3>It's your turn!</h3>
 		<p class="key_value">
-			<span class="key">Your tiles:</span>
-			<?php $rack = str_split($active_player['Player']['rack_tiles']);?>
-			<?php foreach ($rack as $letter):?>
-				<?php if ($letter == '_'):?>
-					<div class="tile"></div>
-				<?php else:?>
-					<div class="tile"><p><?php echo $letter;?><span><?php echo ScrabbleLogic::getLetterScore($letter);?></span></p></div>
-				<?php endif;?>
-			<?php endforeach;?>
+			<span class="key">Your tiles: <a class="shuffle" href="#" onclick="return !shuffle_player_tiles();">(shuffle)</a></span>
 		</p>
+		<div id="updatable_player_tiles"><?php
+			$rack = str_split($active_player['Player']['rack_tiles']);
+			foreach ($rack as $letter) {
+				if ($letter == '_') {
+					echo 'div class="tile"></div>';
+				} else {
+					echo '<div class="tile"><p>'.$letter.'<span>'.ScrabbleLogic::getLetterScore($letter).'</span></p></div>';
+				}
+			}
+		?></div>
 		<div style="clear:both;"></div>
 		<p class="key_value">
-			<span class="key">Valid word?</span>
-			<span class="value" id="updatable_validity">No</span>
+			<span class="key">Score:</span>
+			<span class="value" id="updatable_score">Invalid move</span>
 		</p>
 		<p class="key_value">
-			<span class="key">Word score:</span>
-			<span class="value" id="updatable_score">0</span>
+			<span class="key">Play:</span>
+			<span class="value">
+				<a class="scrabble_submit" href="#" onclick="return !window.scrabble.submit();">Submit word <span class="little">(&lt;enter&gt;)</span></a>
+				<span class="little">or</span>
+				<a class="scrabble_submit" href="#" onclick="return !window.scrabble.pass();">Pass</a>
+			</span>
 		</p>
 	<?php else:?>
-	It's nt your turn, you'll have to wait..!
+		<h3>It's <?php echo $active_player['User']['nickname'];?>'s turn!</h3>
+		<p class="key_value">
+			<span class="key">Your tiles: <a class="shuffle" href="#" onclick="return !shuffle_player_tiles();">(shuffle)</a></span>
+		</p>
+		<div id="updatable_player_tiles"><?php
+			$rack = str_split($players[$session->read('Auth.User.id')]['Player']['rack_tiles']);
+			foreach ($rack as $letter) {
+				if ($letter == '_') {
+					echo 'div class="tile"></div>';
+				} else {
+					echo '<div class="tile"><p>'.$letter.'<span>'.ScrabbleLogic::getLetterScore($letter).'</span></p></div>';
+				}
+			}
+		?></div>
+		<div style="clear:both;"></div>
 	<?php endif;?>
+	
+	<h3>Players</h3>
+	<?php foreach ($players as $user_id => $player):?>
+		<p class="key_value">
+			<span class="key"><?php echo $player['User']['nickname'];?>, score:</span>
+			<span class="value"><?php echo $player['Player']['score'];?></span>
+		</p>
+	<?php endforeach;?>
 </div>
 <div class="main">
 	<div id="scrabble"></div>
@@ -48,30 +74,44 @@
 				<?php endforeach;?>
 			]<?php endif;?>);
 			
-			window.scrabble.addEvent('onWrite', my_points);
+			<?php if ($active_player['Player']['user_id'] == $session->read('Auth.User.id')):?>
+				window.scrabble.activateSubmit();
+				window.scrabble.addEvent('onWrite', my_points);
+			<?php endif;?>
+		});
+		
+		Array.implement({
+			shuffle: function()
+			{
+				//destination array
+				for (var j, x, i = this.length; i; j = parseInt(Math.random() * i), x = this[--i], this[i] = this[j], this[j] = x);
+				return this;
+			}
 		});
 		
 		function my_points(data)
 		{
-			var errors = ['No tiles!', 'Only one dimension please!', 'Not all tiles connected!'];
-			/*
-			$('points').set('text', 'valid? ' + ((data.score > 0) ? 'YES' : 'NO') + ', score? ' + data.score.toString());
-			if (data.score < 0)
-			{
-				$('points').appendText(' Reason? ' + errors[data.reason]);
-			}
-			*/
-			
 			if (data.score >= 0)
 			{
-				$('updatable_validity').set('text', 'Yes');
 				$('updatable_score').set('text', data.score.toString());
 			}
 			else
 			{
-				$('updatable_validity').set('text', 'Error: ' + errors[data.reason]);
-				$('updatable_score').set('text', 'NaN');
+				$('updatable_score').set('text', 'Invalid move');
 			}
+		}
+		
+		function shuffle_player_tiles()
+		{
+			var tilebox = $('updatable_player_tiles');
+			var tiles = tilebox.getChildren().shuffle();
+			var tile;
+			for (var i = 0; i < 7; i++)
+			{
+				tile = tiles[i].dispose();
+				tile.inject(tilebox);
+			}
+			return true;
 		}
 	</script>
 	<div style="display:none;">
