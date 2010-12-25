@@ -9,7 +9,7 @@
 			$rack = str_split($active_player['Player']['rack_tiles']);
 			foreach ($rack as $letter) {
 				if ($letter == '_') {
-					echo 'div class="tile"></div>';
+					echo '<div class="tile"></div>';
 				} else {
 					echo '<div class="tile"><p>'.$letter.'<span>'.ScrabbleLogic::getLetterScore($letter).'</span></p></div>';
 				}
