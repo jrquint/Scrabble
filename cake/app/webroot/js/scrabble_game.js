@@ -15,16 +15,16 @@
  */
 var ScrabbleGame = new Class(
 {
-	initialize: function(el)
+	initialize: function(el, submit_form, notation_element)
 	{
 		this.el = $(el);
+		this.submit_form = $(submit_form);
+		this.notation_element = $(notation_element);
 		
-		/*
-			Create board div, then startup board manager object
-		*/
-		var board = (new Element('div', {id: 'board'})).inject(el, 'bottom');
+		// Create board div, then startup board manager object
+		var board = (new Element('div', {id: 'board'})).inject(this.el, 'bottom');
 		this.boardManager = new BoardManager(board);
-		this.boardManager.putTiles((arguments[1] || {}), 'permanent');
+		this.boardManager.putTiles((arguments[3] || {}), 'permanent');
 		
 		this.relative_movements = {
 			'up':    {x: 0, y:-1},
@@ -121,9 +121,8 @@ var ScrabbleGame = new Class(
 			return false;
 		}
 		
-		var notation = this.getPlayNotation_();
-		$('notation').set('value', notation);
-		$('play_form').submit();
+		this.notation_element.set('value', this.getPlayNotation_());
+		this.submit_form.submit();
 	},
 	
 	/**
@@ -198,17 +197,16 @@ var ScrabbleGame = new Class(
 		// Append direction and first coordinate to notation
 		if (constant_coord == 'x')
 		{
-			notation = String.fromCharCode(65+tmp[0][constant_coord]) + minbound + ' ' + notation;
+			notation += ' '+ String.fromCharCode(65+tmp[0][constant_coord]) + minbound;
 		}
 		else
 		{
-			notation = tmp[0][constant_coord] + String.fromCharCode(65+minbound) + ' ' + notation;
+			notation += ' '+ tmp[0][constant_coord] + String.fromCharCode(65+minbound);
 		}
 		
 		// Append score to notation
 		notation += ' ' + this.calcScore().toString();
 		
-		alert(notation);
 		return notation;
 	},
 	

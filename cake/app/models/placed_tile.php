@@ -20,18 +20,6 @@ class PlacedTile extends AppModel
 	}
 	
 	/**
-	 * Gets placed tiles for given game
-	 */
-	function getPlacedTiles($game_id)
-	{
-		return $this->find('all', array(
-			'conditions' => array(
-				'game_id' => $game_id,
-			),
-		));
-	}
-	
-	/**
 	 * Gets all placed letters
 	 */
 	function getPlacedLetters($game_id)

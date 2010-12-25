@@ -1,12 +1,55 @@
 
-#scrabble {
+/* Reset */
+html, body, table, tr, td, th, ol, ul, dl, li, dd, dt, p, h1, h2, h3, h4, h5, h6 {
+	margin:0;
+	padding:0;
+	list-style:none;
+}
+
+/* Page layout */
+.all_flash {
+	position:absolute;
+	top:10px;
+	right:10px;
+	padding:15px 20px;
+	width:350px;
+	
+	font-family:Helvetica, Arial, sans-serif;
+	font-size:20px;
+	font-weight:bold;
+	color:#000;
+	text-align:right;
+	
+	background:#D8005D;
+}
+.top {
 	margin:10px;
 }
-input#in {
+.top a.logo {
+	font-family:Georgia, "Times new Roman", serif;
+	font-style:italic;
+	font-size:16px;
+	color:#888;
+	text-decoration:none;
 }
+.top a.logo:hover {
+	color:#000;
+}
+.left {
+	float:left;
+	width:200px;
+	
+	height:400px;
+	background:#443629;
+}
+.main {
+	margin-left:210px;
+}
+
 #board {
 	position:relative;
-	border:2px solid #000;
+	background:#E9BD96 url(../img/board.png) no-repeat 50% 50%;
+	border:4px solid #443629;
 }
 .field,
 .field p,
@@ -17,8 +60,6 @@ input#in {
 	position:absolute;
 	width:30px;
 	height:30px;
-	
-	background:#eee;
 }
 .field p {
 	margin:0 0 0 3px;
@@ -41,18 +82,30 @@ input#in {
 	font-weight:normal;
 	font-size:10px;
 }
-.field.at {
-	background:#D3D3D3;
-}
 .field.temporary {
-	background:#A9D5F2;
-}
-.field.temporary.at {
-	background:#45B0F7;
+	background:#fff;
 }
 .field.permanent {
-	background:#FF9F1E;
+	background:#FCDBAA;
 }
+.field.at,
+.field.temporary.at,
 .field.permanent.at {
-	background:#F76200;
+	background:#000;
+	color:#fff;
+	
+	filter:alpha(opacity=30);
+	-moz-opacity:0.3;
+	-khtml-opacity:0.3;
+	opacity:0.3;
+}
+.field.temporary.at,
+.field.permanent.at {
+	filter:alpha(opacity=100);
+	-moz-opacity:1;
+	-khtml-opacity:1;
+	opacity:1;
+}
+.field.temporary.at {
+	background:#333;
 }

@@ -31,6 +31,7 @@ abstract class ScrabbleLogic
 		{
 			$startat_result = self::parseStartAt($m['startat']);
 			$word_result = self::parseWord($m['word'], $startat_result['initpos'], $startat_result['direction']);
+			$notation = preg_replace('/\[([a-zA-Z]*)\]/e', 'strtolower(\'$1\')', strtoupper($n));
 			return array(
 				'type'                => 'play',
 				'direction'           => $startat_result['direction'],
@@ -41,7 +42,7 @@ abstract class ScrabbleLogic
 				'passes_center_field' => $word_result['passes_center_field'],
 				'mainland_connectors' => $word_result['mainland_connectors'],
 				'out_of_bounds'       => $word_result['out_of_bounds'],
-				'notation'            => $n,
+				'notation'            => $notation,
 			);
 		}
 		else
@@ -103,7 +104,7 @@ abstract class ScrabbleLogic
 		
 		// Change all 'abc' to 'ABC' and '[ABC]' to 'abc'
 		$word = strtoupper($word);
-		$word = preg_replace('/\[([a-zA-Z]*)\]/e', 'strtolower(\'$1\')',  $word);
+		$word = preg_replace('/\[([a-zA-Z]*)\]/e', 'strtolower(\'$1\')', $word);
 		
 		// Change 'ABC(D)(E)FghIJ' to array('A', 'B', 'C', '(D)', '(E)', 'F', 'g', 'h', 'I', 'J')
 		$parts = array();

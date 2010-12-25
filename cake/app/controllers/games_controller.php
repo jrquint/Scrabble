@@ -13,63 +13,20 @@ class GamesController extends AppController
 	
 	function index()
 	{
-		$id = $this->Game->createGame(array(11,13,17,19));
-		$this->Game->id = $id;
-		$this->Game->playMove('a h7');
-		//$this->Game->playMove('exchange a');
-		die();
+		// Games overview:
+		// * My Games (Active; History)
 	}
 	
 	function create()
 	{
 		// arg: ordered array of users
-		$this->Game->createGame(array(5,7,11,13));
+		$this->Game->createGame(array(1,2));
 		
 		$this->redirect('/games/view/'.$this->Game->id);
 	}
 	
 	function view($id = NULL)
 	{
-		$this->layout = 'game';
-		
-		// ID given?
-		if (!$id)
-		{
-			$this->Session->setFlash('Game ID not given!');
-			$this->redirect('/games');
-		}
-		
-		// Game exists?
-		$this->Game->id = $id;
-		$this->Game->read();
-		if (!$this->Game->data)
-		{
-			$this->Session->setFlash('Game with ID '.$id.' does not exist!');
-			$this->redirect('/games');
-		}
-		$this->set('game_id', $this->Game->id);
-		
-		// Get active player rack
-		// TODO: only if YOU ARE the active player, ..?
-		$this->set('rack', $this->Game->getActivePlayerRack());
-		
-		// Get placed tiles
-		// (Javascript only accepts the placed_tile rows, so we have to filter these out)
-		$r = $this->PlacedTile->getPlacedTiles($this->Game->id);
-		$tiles = array();
-		foreach ($r as $tile)
-		{
-			// (Just in case the letters are stored lowercase -- uppercase them!)
-			$tile['PlacedTile']['letter']      = strtoupper($tile['PlacedTile']['letter']);
-			$tile['PlacedTile']['blankletter'] = strtoupper($tile['PlacedTile']['blankletter']);
-			
-			$tiles []= $tile['PlacedTile'];
-		}
-		$this->set('tiles', $tiles);
-	}
-	
-	function play($id = NULL)
-	{
 		// ID given?
 		if (!$id)
 		{
@@ -86,26 +43,38 @@ class GamesController extends AppController
 			$this->redirect('/games');
 		}
 		
-		// Play notation given?
-		if (!$this->data)
+		// Check for word submit
+		if (isset($this->data))
 		{
-			$this->Session->setFlash('Notation not given!');
-			$this->redirect('/games/view/'.$this->Game->id);
+			if (!isset($this->data['play_notation']))
+			{
+				die('WTF');
+			}
+			$result = $this->Game->play($this->data['play_notation']);
+			if ($result === true)
+			{
+				// Success
+				$this->Session->setFlash('Success!');
+				$this->redirect('/games/view/'.$this->Game->id);
+			}
+			else
+			{
+				// Error
+				$this->Session->setFlash($this->Game->errors[$this->Game->errorcode]);
+				$this->redirect('/games/view/'.$this->Game->id);
+			}
 		}
 		
-		// Play!
-		$notation = $this->data['notation'];
-		$result = $this->Game->playMove($notation);
-		if ($result !== true)
-		{
-			// Error!
-			$this->Session->setFlash('Error! '.$this->Game->errors[$result]);
-			$this->redirect('/games/view/'.$this->Game->id);
-		}
+		// Get game data
+		$this->set('game', $this->Game->data);
 		
-		// Done!
-		$this->Session->setFlash('Success!');
-		$this->redirect('/games/view/'.$this->Game->id);
+		// Get active player data
+		$this->Player->id = $this->Game->data['Game']['active_player'];
+		$this->Player->read();
+		$this->set('active_player', $this->Player->data);
+		
+		// $tiles for board element
+		$this->set('tiles', $this->Game->data['PlacedTile']);
 	}
 }
 

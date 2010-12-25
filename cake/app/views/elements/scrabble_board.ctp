@@ -6,7 +6,7 @@
 <script type="text/javascript">
 	window.addEvent('domready', function()
 	{
-		window.scrabble = new ScrabbleGame('scrabble'<?php if (!empty($tiles)):?>, [
+		window.scrabble = new ScrabbleGame('scrabble', '<?php echo $html->url('/games/view/');?>'<?php if (!empty($tiles)):?>, [
 			<?php foreach ($tiles as $tile):?>
 			{
 				pos: {

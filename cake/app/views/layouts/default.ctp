@@ -9,8 +9,18 @@
 </head>
 <body>
 
-<?php echo $session->flash();?>
+<div class="top">
+	<a class="logo" href="<?php echo $html->url('/');?>">Scrabble!</a>
+</div>
+
 <?php echo $content_for_layout;?>
+
+<?php $flash = $session->flash() . $session->flash('auth');?>
+<?php if (!empty($flash)):?>
+	<div class="all_flash">
+		<?php echo $flash;?>
+	</div>
+<?php endif;?>
 
 </body>
 </html>
