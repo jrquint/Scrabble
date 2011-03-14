@@ -16,7 +16,7 @@ abstract class ScrabbleLogic
 		{
 			return array('type' => 'pass');
 		}
-		elseif (preg_match('/^exchange([ ]+(?<letters>[a-zA-Z_]*))?$/', $n, $m))
+		elseif (preg_match('/^exchange([ ]+(?P<letters>[a-zA-Z_]*))?$/', $n, $m))
 		{
 			if (empty($m['letters']))
 			{
@@ -27,7 +27,7 @@ abstract class ScrabbleLogic
 				'letters' => new LetterCollection(strtoupper($m['letters'])),
 			);
 		}
-		elseif (preg_match('/^(?<word>[a-z\[\]\(\)]+)[ ]+(?<startat>([0-9]{1}|1[0-4]{1})[a-oA-O]|[a-oA-O]([0-9]{1}|1[0-4]{1}))([ ]+(?<score>[0-9]+))?$/i', $n, $m))
+		elseif (preg_match('/^(?P<word>[a-z\[\]\(\)]+)[ ]+(?P<startat>([0-9]{1}|1[0-4]{1})[a-oA-O]|[a-oA-O]([0-9]{1}|1[0-4]{1}))([ ]+(?P<score>[0-9]+))?$/i', $n, $m))
 		{
 			$startat_result = self::parseStartAt($m['startat']);
 			$word_result = self::parseWord($m['word'], $startat_result['initpos'], $startat_result['direction']);
